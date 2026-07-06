@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kitchen Display — KDS</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/kitchen.css">
+</head>
+<body>
+  <!-- ─── Header ─── -->
+  <header class="kds-header">
+    <div class="kds-header-left">
+      <span class="kds-title">🍳 Kitchen Display</span>
+      <span class="kds-time" id="kdsTime"></span>
+    </div>
+    <div class="kds-header-right">
+      <span class="kds-stats">
+        <span class="stat" id="statPending">0 pending</span>
+        <span class="stat-sep">·</span>
+        <span class="stat" id="statCooking">0 cooking</span>
+
+      </span>
+      <span class="connection-dot" id="connDot" title="Connection Status"></span>
+    </div>
+  </header>
+
+  <!-- ─── Filter Tabs ─── -->
+  <nav class="kds-filters" id="kdsFilters">
+    <button class="filter-btn active" data-filter="all">All Orders</button>
+    <button class="filter-btn" data-filter="pending">Pending</button>
+    <button class="filter-btn" data-filter="cooking">Cooking</button>
+
+  </nav>
+
+  <!-- ─── Order Grid ─── -->
+  <section class="kds-orders" id="kdsOrders">
+    <div class="kds-empty" id="kdsEmpty">
+      <div class="empty-icon">🍽️</div>
+      <div class="empty-title">No Orders Yet</div>
+      <div class="empty-desc">Orders from waiters will appear here in real-time</div>
+    </div>
+  </section>
+
+  <!-- ─── New Order Sound (Web Audio API) ─── -->
+  <script>
+    var newOrderSound = (function () {
+      var ctx = null;
+      return function () {
+        try {
+          if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.setValueAtTime(880, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.1);
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.3);
+        } catch (e) {}
+      };
+    })();
+  </script>
+
+  <!-- ─── Toast Container ─── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ─── Scripts ─── -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/socket-client.js"></script>
+  <script src="/js/kitchen.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+</html>

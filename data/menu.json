@@ -1,0 +1,106 @@
+{
+  "categories": {
+    "starters": [
+      {
+        "id": 1,
+        "name": "Spring Rolls",
+        "price": 5.99,
+        "available": true
+      },
+      {
+        "id": 2,
+        "name": "Chicken Wings",
+        "price": 8.99,
+        "available": true
+      },
+      {
+        "id": 3,
+        "name": "Garlic Bread",
+        "price": 4.99,
+        "available": true
+      },
+      {
+        "id": 4,
+        "name": "Soup of the Day",
+        "price": 6.49,
+        "available": true
+      },
+      {
+        "id": 5,
+        "name": "Paneer Tikka",
+        "price": 4.5,
+        "available": true
+      }
+    ],
+    "mains": [
+      {
+        "id": 5,
+        "name": "Chicken Biryani",
+        "price": 14.99,
+        "available": true
+      },
+      {
+        "id": 6,
+        "name": "Grilled Salmon",
+        "price": 18.99,
+        "available": true
+      },
+      {
+        "id": 7,
+        "name": "Beef Steak",
+        "price": 22.99,
+        "available": true
+      },
+      {
+        "id": 8,
+        "name": "Vegetable Pasta",
+        "price": 12.99,
+        "available": true
+      },
+      {
+        "id": 9,
+        "name": "Butter Chicken",
+        "price": 15.99,
+        "available": true
+      },
+      {
+        "id": 10,
+        "name": "Fried Rice",
+        "price": 11.99,
+        "available": true
+      }
+    ],
+    "drinks": [
+      {
+        "id": 11,
+        "name": "Coca Cola",
+        "price": 2.99,
+        "available": true
+      },
+      {
+        "id": 12,
+        "name": "Orange Juice",
+        "price": 3.49,
+        "available": true
+      },
+      {
+        "id": 13,
+        "name": "Lemonade",
+        "price": 2.99,
+        "available": true
+      },
+      {
+        "id": 14,
+        "name": "Mango Lassi",
+        "price": 3.99,
+        "available": true
+      },
+      {
+        "id": 15,
+        "name": "Water",
+        "price": 1.49,
+        "available": true
+      }
+    ]
+  }
+}

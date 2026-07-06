@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restaurant OS — Landing</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      margin: 0;
+      padding: 20px;
+    }
+    .landing {
+      max-width: 700px;
+      width: 100%;
+      text-align: center;
+    }
+    .landing h1 {
+      font-size: 2.8rem;
+      margin-bottom: 0.3em;
+      background: linear-gradient(135deg, #f7971e, #ffd200);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .landing .subtitle {
+      color: #8899aa;
+      font-size: 1rem;
+      margin-bottom: 2.5rem;
+    }
+    .landing .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #1a2a1a;
+      color: #4ade80;
+      border: 1px solid #2a4a2a;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin-bottom: 2rem;
+    }
+    .status-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .panel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 1rem;
+    }
+    .panel-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 28px 20px;
+      text-decoration: none;
+      color: #e0e8f0;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .panel-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.07);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+    .panel-card .icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+    .panel-card .name {
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-bottom: 4px;
+    }
+    .panel-card .desc {
+      color: #8899aa;
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+    .panel-card .badge {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .badge-waiter { background: #1e3a5f; color: #60a5fa; }
+    .badge-kitchen { background: #3a1a1a; color: #fb923c; }
+    .badge-manager { background: #1a2a1a; color: #4ade80; }
+    .table-input-group {
+      margin-top: 20px;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+    }
+    .table-input-group input {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #e0e8f0;
+      width: 80px;
+      text-align: center;
+      font-size: 1rem;
+    }
+    .table-input-group input:focus {
+      outline: none;
+      border-color: #f7971e;
+    }
+    .table-input-group button {
+      background: linear-gradient(135deg, #f7971e, #ffd200);
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      color: #0f0f1a;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .table-input-group button:hover {
+      opacity: 0.9;
+    }
+    .footer-links {
+      margin-top: 2rem;
+      color: #556677;
+      font-size: 0.8rem;
+    }
+    .footer-links a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="landing">
+    <h1>🍽️ Restaurant OS</h1>
+    <p class="subtitle">Real-Time Orchestration Platform</p>
+    <div class="status-badge">
+      <span class="dot"></span>
+      <span>Server Active · Real-time Sync Online</span>
+    </div>
+
+    <div class="panel-grid">
+      <a href="/waiter.html?table=01" class="panel-card" id="waiterCard">
+        <div class="icon">📋</div>
+        <div class="name">Waiter Pad</div>
+        <div class="desc">Mobile-first ordering interface with table routing, modifiers &amp; live basket</div>
+        <span class="badge badge-waiter">Table Service</span>
+      </a>
+
+      <a href="/kitchen.html" class="panel-card">
+        <div class="icon">🍳</div>
+        <div class="name">Kitchen Display</div>
+        <div class="desc">Wall-mounted KDS with order queue, status pipeline &amp; modifier alerts</div>
+        <span class="badge badge-kitchen">Kitchen</span>
+      </a>
+
+      <a href="/manager.html" class="panel-card">
+        <div class="icon">📊</div>
+        <div class="name">Manager Panel</div>
+        <div class="desc">Catalog mutation, inventory sync &amp; live menu preview</div>
+        <span class="badge badge-manager">Admin</span>
+      </a>
+    </div>
+
+    <div class="table-input-group">
+      <label style="color:#8899aa;font-size:0.9rem;">Table:</label>
+      <input type="number" id="tableInput" value="1" min="1" max="99">
+      <button onclick="openWaiter()">Open Waiter Pad</button>
+    </div>
+
+    <div class="footer-links">
+      <span>Server: ws://localhost:3000</span>
+    </div>
+  </div>
+
+  <script>
+    function openWaiter() {
+      const table = document.getElementById('tableInput').value.padStart(2, '0');
+      window.open('/waiter.html?table=' + table, '_blank');
+    }
+    document.getElementById('tableInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') openWaiter();
+    });
+  </script>  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+</html>

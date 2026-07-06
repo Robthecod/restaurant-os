@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Waiter Pad — Ordering</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/waiter.css">
+</head>
+<body>
+  <!-- ─── Header ─── -->
+  <header class="waiter-header">
+    <div class="header-left">
+      <span class="table-badge" id="tableBadge">Table 01</span>
+    </div>
+    <div class="header-center">
+      <span class="header-title">📋 Order Pad</span>
+    </div>
+    <div class="header-right">
+      <span class="connection-dot" id="connDot" title="Connection Status"></span>
+    </div>
+  </header>
+
+  <!-- ─── Category Tabs ─── -->
+  <nav class="category-tabs" id="categoryTabs">
+    <button class="tab active" data-category="starters">🥟 Starters</button>
+    <button class="tab" data-category="mains">🍛 Mains</button>
+    <button class="tab" data-category="drinks">🥤 Drinks</button>
+  </nav>
+
+  <!-- ─── Menu Grid ─── -->
+  <section class="menu-grid-container">
+    <div class="menu-grid" id="menuGrid"></div>
+    <div class="menu-loading" id="menuLoading">Loading menu...</div>
+  </section>
+
+  <!-- ─── Basket Summary ─── -->
+  <section class="basket-bar" id="basketBar">
+    <div class="basket-info">
+      <span class="basket-label">Basket</span>
+      <span class="basket-count" id="basketCount">0 items</span>
+      <span class="basket-total" id="basketTotal">₹0.00</span>
+    </div>
+    <button class="btn btn-primary btn-send" id="sendBtn" disabled>
+      Send to Kitchen →
+    </button>
+  </section>
+
+  <!-- ─── Modifier Modal ─── -->
+  <div class="modal-overlay" id="modifierModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalItemName">Item Name</h3>
+        <span class="modal-price" id="modalItemPrice">₹0.00</span>
+      </div>
+      <div class="modal-body">
+        <label for="modifierInput">Special Instructions / Modifiers</label>
+        <textarea
+          id="modifierInput"
+          rows="3"
+          placeholder="e.g., No onions, extra spicy, ice on the side..."
+        ></textarea>
+        <div class="quick-modifiers">
+          <button class="quick-mod" data-mod="No onions">No onions</button>
+          <button class="quick-mod" data-mod="Extra spicy">Extra spicy</button>
+          <button class="quick-mod" data-mod="Less oil">Less oil</button>
+          <button class="quick-mod" data-mod="Well done">Well done</button>
+          <button class="quick-mod" data-mod="Ice on side">Ice on side</button>
+          <button class="quick-mod" data-mod="No ice">No ice</button>
+        </div>
+        <div class="quantity-control">
+          <button class="qty-btn" id="qtyDec">−</button>
+          <span class="qty-value" id="qtyValue">1</span>
+          <button class="qty-btn" id="qtyInc">+</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modalSkip">Skip &amp; Add</button>
+        <button class="btn btn-primary" id="modalAdd">Add to Basket</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Basket Modal ─── -->
+  <div class="modal-overlay" id="basketModal">
+    <div class="modal-content modal-basket">
+      <div class="modal-header">
+        <h3>🧺 Your Basket</h3>
+        <span class="modal-price" id="basketModalTotal">₹0.00</span>
+      </div>
+      <div class="modal-body">
+        <div id="basketItems"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="basketClose">Continue Ordering</button>
+        <button class="btn btn-primary" id="basketSend">Send to Kitchen →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Toast Container ─── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ─── Scripts ─── -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/socket-client.js"></script>
+  <script src="/js/waiter.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+</html>

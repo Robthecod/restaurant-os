@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manager Panel — Admin</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/manager.css">
+</head>
+<body>
+  <!-- ─── Header ─── -->
+  <header class="mgr-header">
+    <div class="mgr-header-left">
+      <span class="mgr-title">📊 Manager Panel</span>
+      <span class="mgr-subtitle">Menu Administration</span>
+    </div>
+    <div class="mgr-header-right">
+      <span class="sync-status" id="syncStatus">
+        <span class="sync-dot"></span>
+        <span id="syncLabel">Connected</span>
+      </span>
+      <span class="connection-dot" id="connDot" title="Connection Status"></span>
+    </div>
+  </header>
+
+  <!-- ─── Main Layout ─── -->
+  <div class="mgr-layout">
+    <!-- ─── Left Panel: Add Item Form ─── -->
+    <section class="mgr-panel mgr-form-panel">
+      <h2 class="panel-title">➕ Add Menu Item</h2>
+      <form class="menu-form" id="menuForm">
+        <div class="form-group">
+          <label for="itemCategory">Category</label>
+          <select id="itemCategory" required>
+            <option value="starters">Starters</option>
+            <option value="mains" selected>Mains</option>
+            <option value="drinks">Drinks</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="itemName">Item Name</label>
+          <input
+            type="text"
+            id="itemName"
+            placeholder="e.g., Grilled Salmon"
+            required
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="itemPrice">Price (₹)</label>
+          <input
+            type="number"
+            id="itemPrice"
+            placeholder="e.g., 14.99"
+            step="0.01"
+            min="0.01"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-full">
+          ➕ Add to Menu
+        </button>
+      </form>
+
+      <div class="mgr-divider"></div>
+
+      <!-- ─── Quick Stats ─── -->
+      <div class="quick-stats">
+        <div class="quick-stat">
+          <span class="qs-value" id="qsTotal">0</span>
+          <span class="qs-label">Total Items</span>
+        </div>
+        <div class="quick-stat">
+          <span class="qs-value" id="qsActive">0</span>
+          <span class="qs-label">Available</span>
+        </div>
+        <div class="quick-stat">
+          <span class="qs-value" id="qsCategories">3</span>
+          <span class="qs-label">Categories</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Right Panel: Live Menu Preview ─── -->
+    <section class="mgr-panel mgr-preview-panel">
+      <h2 class="panel-title">📋 Live Menu Preview</h2>
+      <p class="panel-desc">Changes broadcast instantly to all connected waiters</p>
+
+      <div class="menu-preview" id="menuPreview">
+        <div class="preview-loading">Loading menu...</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ─── Edit Modal ─── -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-content modal-edit">
+      <div class="modal-header">
+        <h3>✏️ Edit Menu Item</h3>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="editName">Item Name</label>
+          <input type="text" id="editName" required />
+        </div>
+        <div class="form-group">
+          <label for="editPrice">Price (₹)</label>
+          <input type="number" id="editPrice" step="0.01" min="0.01" required />
+        </div>
+        <div class="form-group">
+          <label class="switch-label">
+            <input type="checkbox" id="editAvailable" checked />
+            <span class="switch-track">
+              <span class="switch-thumb"></span>
+            </span>
+            <span>Available</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="editCancel">Cancel</button>
+        <button class="btn btn-primary" id="editSave">💾 Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Toast Container ─── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ─── Scripts ─── -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/socket-client.js"></script>
+  <script src="/js/manager.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+</html>

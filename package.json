@@ -1,0 +1,17 @@
+{
+  "name": "restaurant-orchestration-platform",
+  "version": "1.0.0",
+  "description": "Real-Time Restaurant Orchestration Platform - Bridging front-of-house, kitchen, and management",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["restaurant", "pos", "kds", "kitchen-display", "socket.io", "real-time"],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "cors": "^2.8.5"
+  }
+}
