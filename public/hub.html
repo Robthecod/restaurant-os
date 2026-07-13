@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roux — Multi-Device Control Center</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      margin: 0;
+      padding: 16px;
+    }
+    .landing {
+      max-width: 900px;
+      width: 100%;
+      text-align: center;
+    }
+
+    /* ─── Header ─── */
+    .landing h1 {
+      font-size: 2.6rem;
+      margin-bottom: 0.2em;
+      background: linear-gradient(135deg, #f7971e, #ffd200);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .landing .subtitle {
+      color: #8899aa;
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ─── Status ─── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #1a2a1a;
+      color: #4ade80;
+      border: 1px solid #2a4a2a;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    .status-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ─── LAN IP Display ─── */
+    .lan-ip-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .lan-ip-label {
+      font-size: 0.8rem;
+      color: #8899aa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .lan-ip-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #e0e8f0;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      background: rgba(247,151,30,0.08);
+      border: 1px solid rgba(247,151,30,0.2);
+      padding: 8px 24px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: all;
+    }
+    .lan-ip-value:hover {
+      background: rgba(247,151,30,0.15);
+      border-color: #f7971e;
+    }
+    .lan-ip-hint {
+      font-size: 0.8rem;
+      color: #556677;
+    }
+
+    /* ─── Device Grid ─── */
+    .device-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 700px) {
+      .device-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+    }
+
+    .device-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 24px 16px;
+      text-decoration: none;
+      color: #e0e8f0;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .device-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.07);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+    .device-card .device-icon {
+      font-size: 2.2rem;
+    }
+    .device-card .device-name {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    .device-card .device-desc {
+      color: #8899aa;
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+    .device-card .device-target {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .target-phone { background: #1e3a5f; color: #60a5fa; }
+    .target-tv    { background: #3a1a1a; color: #fb923c; }
+    .target-desktop { background: #1a2a1a; color: #4ade80; }
+
+    .device-card .qr-code {
+      width: 120px;
+      height: 120px;
+      border-radius: 12px;
+      background: white;
+      padding: 8px;
+      margin: 4px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .device-card .qr-code img {
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+    .device-card .qr-label {
+      font-size: 0.7rem;
+      color: #556677;
+    }
+    .device-card .open-btn {
+      margin-top: 4px;
+      padding: 10px 24px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    .open-btn-waiter {
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: white;
+    }
+    .open-btn-waiter:hover { opacity: 0.9; }
+    .open-btn-kitchen {
+      background: linear-gradient(135deg, #ea580c, #f97316);
+      color: white;
+    }
+    .open-btn-kitchen:hover { opacity: 0.9; }
+    .open-btn-manager {
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: white;
+    }
+    .open-btn-manager:hover { opacity: 0.9; }
+
+    /* ─── Table Select ─── */
+    .table-select-group {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 16px 20px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      margin-bottom: 1.5rem;
+    }
+    .table-select-group label {
+      color: #8899aa;
+      font-size: 0.85rem;
+    }
+    .table-select-group input {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #e0e8f0;
+      width: 70px;
+      text-align: center;
+      font-size: 1rem;
+    }
+    .table-select-group input:focus {
+      outline: none;
+      border-color: #f7971e;
+    }
+    .table-select-group button {
+      background: linear-gradient(135deg, #f7971e, #ffd200);
+      border: none;
+      border-radius: 8px;
+      padding: 8px 18px;
+      color: #0f0f1a;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .table-select-group button:hover { opacity: 0.9; }
+
+    /* ─── Footer ─── */
+    .footer-links {
+      color: #445566;
+      font-size: 0.75rem;
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .footer-links a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+    .footer-links a:hover { text-decoration: underline; }
+
+    /* ─── Loading ─── */
+    .ip-loading {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #556677;
+      font-size: 0.85rem;
+    }
+    .ip-loading .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-top: 2px solid #f7971e;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .qr-loading {
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #556677;
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="landing">
+    <h1>🥘 Roux</h1>
+    <p class="subtitle">Multi-Device Restaurant Engine</p>
+
+    <div class="status-bar">
+      <div class="status-badge">
+        <span class="dot"></span>
+        <span>Server Active</span>
+      </div>
+    </div>
+
+    <!-- ─── LAN IP ─── -->
+    <div class="lan-ip-box">
+      <span class="lan-ip-label">📡 Connect from any device on your network</span>
+      <div id="lanIpDisplay">
+        <span class="ip-loading"><span class="spinner"></span> Detecting network...</span>
+      </div>
+      <span class="lan-ip-hint">Type this IP into any phone, tablet, or TV browser on the same WiFi</span>
+    </div>
+
+    <!-- ─── Device Cards ─── -->
+    <div class="device-grid" id="deviceGrid">
+      <!-- Waiter - Phone -->
+      <div class="device-card">
+        <div class="device-icon">📋</div>
+        <div class="device-name">Waiter Pad</div>
+        <span class="device-target target-phone">📱 Open on Phone</span>
+        <div class="device-desc">Take orders, add modifiers, send to kitchen</div>
+        <div class="qr-code" id="qrWaiter">
+          <span class="qr-loading">loading...</span>
+        </div>
+        <span class="qr-label">Scan with phone camera</span>
+        <button class="open-btn open-btn-waiter" onclick="openWaiter()">📋 Open Waiter</button>
+      </div>
+
+      <!-- Kitchen - TV -->
+      <div class="device-card">
+        <div class="device-icon">🍳</div>
+        <div class="device-name">Kitchen Display</div>
+        <span class="device-target target-tv">📺 Display on TV</span>
+        <div class="device-desc">Live order queue with status tracking & alerts</div>
+        <div class="qr-code" id="qrKitchen">
+          <span class="qr-loading">loading...</span>
+        </div>
+        <span class="qr-label">Scan with TV browser</span>
+        <button class="open-btn open-btn-kitchen" onclick="window.open('/kitchen.html','_blank')">🍳 Open Kitchen</button>
+      </div>
+
+      <!-- Manager - Desktop -->
+      <div class="device-card">
+        <div class="device-icon">📊</div>
+        <div class="device-name">Manager Panel</div>
+        <span class="device-target target-desktop">💻 Open on Desktop</span>
+        <div class="device-desc">Manage menu items, categories & availability</div>
+        <div class="qr-code" id="qrManager">
+          <span class="qr-loading">loading...</span>
+        </div>
+        <span class="qr-label">Scan with desktop browser</span>
+        <button class="open-btn open-btn-manager" onclick="window.open('/manager.html','_blank')">📊 Open Manager</button>
+      </div>
+
+      <!-- Customer - Phone (Self-Ordering) -->
+      <div class="device-card">
+        <div class="device-icon">📱</div>
+        <div class="device-name">Customer Ordering</div>
+        <span class="device-target target-phone">📱 Guest Phone</span>
+        <div class="device-desc">QR menu — guests scan, browse & order from their phone</div>
+        <div class="qr-code" id="qrCustomer">
+          <span class="qr-loading">loading...</span>
+        </div>
+        <div class="customer-table-select" style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <label for="customerTableNum" style="font-size:0.75rem;color:#8899aa;">Table</label>
+          <input type="number" id="customerTableNum" value="1" min="1" max="99"
+                 style="width:50px;padding:4px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:#e0e8f0;text-align:center;font-size:0.9rem;">
+          <button class="open-btn open-btn-waiter" onclick="refreshCustomerQR()" style="padding:6px 14px;font-size:0.75rem;width:auto;">↻ QR</button>
+        </div>
+        <span class="qr-label" id="customerQRLabel">Scan to view menu & order</span>
+      </div>
+    </div>
+
+
+
+    <div class="footer-links">
+      <span>PWA Installable</span>
+      <span>·</span>
+<span id="serverUrlDisplay">ws://localhost:3000</span>
+    </div>
+  </div>
+
+  <script>
+    let serverUrl = '';
+
+    // ─── Detect LAN IP ───
+    async function detectLAN() {
+      try {
+        const res = await fetch('/api/network');
+        const data = await res.json();
+        serverUrl = data.url;
+        document.getElementById('lanIpDisplay').innerHTML = `
+          <div class="lan-ip-value" onclick="copyIP()" title="Click to copy">${data.url.replace('http://','')}</div>
+        `;
+        document.getElementById('serverUrlDisplay').textContent = serverUrl;
+        // Generate QR codes with the LAN URL
+        generateQRs(data.url);
+      } catch (err) {
+        document.getElementById('lanIpDisplay').innerHTML = `
+          <div class="lan-ip-value" style="font-size:1.2rem;user-select:all;">localhost:3000</div>
+        `;
+        generateQRs(window.location.origin);
+      }
+    }
+
+    // ─── Copy IP ───
+    function copyIP() {
+      const ip = document.querySelector('.lan-ip-value');
+      if (ip) {
+        navigator.clipboard.writeText(ip.textContent.trim());
+        const orig = ip.textContent;
+        ip.textContent = '✅ Copied!';
+        setTimeout(() => ip.textContent = orig, 1500);
+      }
+    }
+
+    // ─── Generate QR Codes ───
+    function generateQRs(baseUrl) {
+      const qrAPI = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=';
+
+      const waiterUrl = encodeURIComponent(baseUrl + '/waiter.html?table=01');
+      const kitchenUrl = encodeURIComponent(baseUrl + '/kitchen.html');
+      const managerUrl = encodeURIComponent(baseUrl + '/manager.html');
+
+      document.getElementById('qrWaiter').innerHTML =
+        `<img src="${qrAPI}${waiterUrl}" alt="QR for Waiter Pad" loading="lazy" onerror="this.parentElement.innerHTML='📋'">`;
+      document.getElementById('qrKitchen').innerHTML =
+        `<img src="${qrAPI}${kitchenUrl}" alt="QR for Kitchen Display" loading="lazy" onerror="this.parentElement.innerHTML='🍳'">`;
+      document.getElementById('qrManager').innerHTML =
+        `<img src="${qrAPI}${managerUrl}" alt="QR for Manager Panel" loading="lazy" onerror="this.parentElement.innerHTML='📊'">`;
+
+      // Customer QR (default table 1)
+      refreshCustomerQR(baseUrl);
+    }
+
+    // ─── Customer QR per table ───
+    function refreshCustomerQR(baseUrl) {
+      const tableNum = document.getElementById('customerTableNum').value || '1';
+      const tableStr = String(tableNum).padStart(2, '0');
+      const url = (baseUrl || serverUrl || window.location.origin) + '/customer.html?table=' + tableStr;
+      const qrAPI = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=';
+      document.getElementById('qrCustomer').innerHTML =
+        `<img src="${qrAPI}${encodeURIComponent(url)}" alt="QR for Customer Ordering Table ${tableStr}" loading="lazy" onerror="this.parentElement.innerHTML='📱'">`;
+      document.getElementById('customerQRLabel').textContent = `Table ${tableStr} · Scan to order`;
+    }
+
+    // ─── Open Waiter ───
+    function openWaiter() {
+      window.open('/waiter.html?table=01', '_blank');
+    }
+
+    // ─── Init ───
+    document.addEventListener('DOMContentLoaded', () => {
+      detectLAN();
+
+    });
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</body>
+</html>

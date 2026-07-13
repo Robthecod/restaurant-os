@@ -1,0 +1,7 @@
+# 🤖 robots.txt for Roux
+# Allow all crawlers to index the public website
+
+User-agent: *
+Allow: /
+
+# Sitemap — coming soon

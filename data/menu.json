@@ -3,102 +3,380 @@
     "starters": [
       {
         "id": 1,
-        "name": "Spring Rolls",
-        "price": 5.99,
+        "name": "Crispy Corn",
+        "price": 150,
         "available": true
       },
       {
         "id": 2,
-        "name": "Chicken Wings",
-        "price": 8.99,
+        "name": "Paneer Tikka",
+        "price": 495,
         "available": true
       },
       {
         "id": 3,
-        "name": "Garlic Bread",
-        "price": 4.99,
+        "name": "Garlic Bread with Cheese",
+        "price": 395,
         "available": true
       },
       {
         "id": 4,
-        "name": "Soup of the Day",
-        "price": 6.49,
+        "name": "Hara Bhara Kabab",
+        "price": 395,
         "available": true
       },
       {
         "id": 5,
-        "name": "Paneer Tikka",
-        "price": 4.5,
+        "name": "Masala Spring Rolls",
+        "price": 395,
+        "available": true
+      },
+      {
+        "id": 6,
+        "name": "Mushroom Kurkure",
+        "price": 425,
+        "available": true
+      },
+      {
+        "id": 7,
+        "name": "Nachos Supreme",
+        "price": 495,
+        "available": true
+      },
+      {
+        "id": 8,
+        "name": "Sweet Potato Fries",
+        "price": 375,
+        "available": true
+      },
+      {
+        "id": 9,
+        "name": "Chilli Paneer",
+        "price": 495,
+        "available": true
+      },
+      {
+        "id": 10,
+        "name": "Veg Seekh Kabab",
+        "price": 425,
+        "available": true
+      },
+      {
+        "id": 11,
+        "name": "Dahi Ke Kabab",
+        "price": 495,
+        "available": true
+      },
+      {
+        "id": 12,
+        "name": "Spinach & Corn Soup",
+        "price": 325,
+        "available": true
+      },
+      {
+        "id": 13,
+        "name": "Tomato Basil Soup",
+        "price": 295,
+        "available": true
+      },
+      {
+        "id": 14,
+        "name": "Cheese Chilli Toast",
+        "price": 375,
         "available": true
       }
     ],
     "mains": [
       {
-        "id": 5,
-        "name": "Chicken Biryani",
-        "price": 14.99,
+        "id": 15,
+        "name": "Veg Biryani",
+        "price": 595,
         "available": true
       },
       {
-        "id": 6,
-        "name": "Grilled Salmon",
-        "price": 18.99,
+        "id": 16,
+        "name": "Paneer Butter Masala",
+        "price": 595,
         "available": true
       },
       {
-        "id": 7,
-        "name": "Beef Steak",
-        "price": 22.99,
+        "id": 17,
+        "name": "Dal Makhani",
+        "price": 525,
         "available": true
       },
       {
-        "id": 8,
-        "name": "Vegetable Pasta",
-        "price": 12.99,
+        "id": 18,
+        "name": "Shahi Paneer",
+        "price": 625,
         "available": true
       },
       {
-        "id": 9,
-        "name": "Butter Chicken",
-        "price": 15.99,
+        "id": 19,
+        "name": "Kadai Vegetable",
+        "price": 545,
         "available": true
       },
       {
-        "id": 10,
-        "name": "Fried Rice",
-        "price": 11.99,
+        "id": 20,
+        "name": "Malai Kofta",
+        "price": 595,
+        "available": true
+      },
+      {
+        "id": 21,
+        "name": "Dal Tadka",
+        "price": 475,
+        "available": true
+      },
+      {
+        "id": 22,
+        "name": "Palak Paneer",
+        "price": 545,
+        "available": true
+      },
+      {
+        "id": 23,
+        "name": "Paneer Tikka Masala",
+        "price": 625,
+        "available": true
+      },
+      {
+        "id": 24,
+        "name": "Mix Veg Curry",
+        "price": 495,
+        "available": true
+      },
+      {
+        "id": 25,
+        "name": "Aloo Gobi",
+        "price": 445,
+        "available": true
+      },
+      {
+        "id": 26,
+        "name": "Bhindi Masala",
+        "price": 445,
+        "available": true
+      },
+      {
+        "id": 27,
+        "name": "Jeera Rice",
+        "price": 295,
+        "available": true
+      },
+      {
+        "id": 28,
+        "name": "Lemon Rice",
+        "price": 345,
+        "available": true
+      },
+      {
+        "id": 29,
+        "name": "Veg Pulao",
+        "price": 495,
+        "available": true
+      },
+      {
+        "id": 30,
+        "name": "Veg Pasta in White Sauce",
+        "price": 595,
+        "available": true
+      },
+      {
+        "id": 31,
+        "name": "Veg Pasta in Red Sauce",
+        "price": 545,
+        "available": true
+      },
+      {
+        "id": 32,
+        "name": "Veg Fried Rice",
+        "price": 495,
+        "available": true
+      },
+      {
+        "id": 33,
+        "name": "Hakka Noodles",
+        "price": 495,
+        "available": true
+      },
+      {
+        "id": 34,
+        "name": "Veg Manchurian Gravy",
+        "price": 495,
+        "available": true
+      },
+      {
+        "id": 35,
+        "name": "Stuffed Paratha",
+        "price": 295,
+        "available": true
+      },
+      {
+        "id": 36,
+        "name": "Butter Naan",
+        "price": 195,
+        "available": true
+      },
+      {
+        "id": 37,
+        "name": "Special Veg Thali",
+        "price": 795,
+        "available": true
+      },
+      {
+        "id": 38,
+        "name": "Veg Sizzler",
+        "price": 725,
+        "available": true
+      }
+    ],
+    "desserts": [
+      {
+        "id": 39,
+        "name": "Gulab Jamun (2 pcs)",
+        "price": 295,
+        "available": true
+      },
+      {
+        "id": 40,
+        "name": "Gajar Ka Halwa",
+        "price": 325,
+        "available": true
+      },
+      {
+        "id": 41,
+        "name": "Brownie with Ice Cream",
+        "price": 395,
+        "available": true
+      },
+      {
+        "id": 42,
+        "name": "Mango Mousse",
+        "price": 375,
+        "available": true
+      },
+      {
+        "id": 43,
+        "name": "Tiramisu",
+        "price": 425,
+        "available": true
+      },
+      {
+        "id": 44,
+        "name": "Rasmalai",
+        "price": 345,
+        "available": true
+      },
+      {
+        "id": 45,
+        "name": "Ice Cream (2 scoops)",
+        "price": 245,
+        "available": true
+      },
+      {
+        "id": 46,
+        "name": "Sizzling Brownie",
+        "price": 445,
+        "available": true
+      },
+      {
+        "id": 47,
+        "name": "Phirni",
+        "price": 295,
+        "available": true
+      },
+      {
+        "id": 48,
+        "name": "Fresh Fruit Bowl",
+        "price": 345,
+        "available": true
+      },
+      {
+        "id": 49,
+        "name": "Kulfi",
+        "price": 325,
+        "available": true
+      },
+      {
+        "id": 50,
+        "name": "Cheesecake",
+        "price": 395,
         "available": true
       }
     ],
     "drinks": [
       {
-        "id": 11,
-        "name": "Coca Cola",
-        "price": 2.99,
+        "id": 51,
+        "name": "Masala Chai",
+        "price": 195,
         "available": true
       },
       {
-        "id": 12,
-        "name": "Orange Juice",
-        "price": 3.49,
+        "id": 52,
+        "name": "Cold Coffee",
+        "price": 295,
         "available": true
       },
       {
-        "id": 13,
-        "name": "Lemonade",
-        "price": 2.99,
-        "available": true
-      },
-      {
-        "id": 14,
+        "id": 53,
         "name": "Mango Lassi",
-        "price": 3.99,
+        "price": 345,
         "available": true
       },
       {
-        "id": 15,
-        "name": "Water",
-        "price": 1.49,
+        "id": 54,
+        "name": "Fresh Lime Soda",
+        "price": 195,
+        "available": true
+      },
+      {
+        "id": 55,
+        "name": "Buttermilk (Chaas)",
+        "price": 175,
+        "available": true
+      },
+      {
+        "id": 56,
+        "name": "Fruit Smoothie",
+        "price": 375,
+        "available": true
+      },
+      {
+        "id": 57,
+        "name": "Coconut Water",
+        "price": 225,
+        "available": true
+      },
+      {
+        "id": 58,
+        "name": "Soft Drinks",
+        "price": 99,
+        "available": true
+      },
+      {
+        "id": 59,
+        "name": "Mint Lemonade",
+        "price": 225,
+        "available": true
+      },
+      {
+        "id": 60,
+        "name": "Iced Tea",
+        "price": 245,
+        "available": true
+      },
+      {
+        "id": 61,
+        "name": "Hot Chocolate",
+        "price": 325,
+        "available": true
+      },
+      {
+        "id": 62,
+        "name": "Fresh Juice (Seasonal)",
+        "price": 295,
         "available": true
       }
     ]

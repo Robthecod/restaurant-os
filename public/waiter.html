@@ -18,22 +18,42 @@
       <span class="header-title">📋 Order Pad</span>
     </div>
     <div class="header-right">
+      <button class="orders-toggle" id="ordersToggle" title="View Orders">📋 Orders</button>
       <span class="connection-dot" id="connDot" title="Connection Status"></span>
     </div>
   </header>
 
-  <!-- ─── Category Tabs ─── -->
-  <nav class="category-tabs" id="categoryTabs">
-    <button class="tab active" data-category="starters">🥟 Starters</button>
-    <button class="tab" data-category="mains">🍛 Mains</button>
-    <button class="tab" data-category="drinks">🥤 Drinks</button>
-  </nav>
+  <div class="waiter-layout">
+    <!-- ─── Main Content (Menu) ─── -->
+    <div class="waiter-main">
+      <!-- ─── Category Tabs ─── -->
+      <nav class="category-tabs" id="categoryTabs">
+        <button class="tab active" data-category="starters">🥟 Starters</button>
+        <button class="tab" data-category="mains">🍛 Mains</button>
+        <button class="tab" data-category="desserts">🍨 Desserts</button>
+        <button class="tab" data-category="drinks">🥤 Drinks</button>
+      </nav>
 
-  <!-- ─── Menu Grid ─── -->
-  <section class="menu-grid-container">
-    <div class="menu-grid" id="menuGrid"></div>
-    <div class="menu-loading" id="menuLoading">Loading menu...</div>
-  </section>
+      <!-- ─── Menu Grid ─── -->
+      <section class="menu-grid-container">
+        <div class="menu-grid" id="menuGrid"></div>
+        <div class="menu-loading" id="menuLoading">Loading menu...</div>
+      </section>
+    </div>
+
+    <!-- ─── Sidebar: Live Item Tracker ─── -->
+    <aside class="waiter-sidebar" id="waiterSidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">📋 Live Tracker</span>
+        <button class="sidebar-toggle" id="sidebarToggle" title="Collapse">◀</button>
+      </div>
+      <div class="sidebar-items" id="sidebarItems">
+        <div class="sidebar-empty">
+          <span>No active items — place an order to see tracking here</span>
+        </div>
+      </div>
+    </aside>
+  </div>
 
   <!-- ─── Basket Summary ─── -->
   <section class="basket-bar" id="basketBar">
@@ -95,6 +115,80 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="basketClose">Continue Ordering</button>
         <button class="btn btn-primary" id="basketSend">Send to Kitchen →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Orders Panel ─── -->
+  <div class="modal-overlay" id="ordersModal">
+    <div class="modal-content modal-orders">
+      <div class="modal-header">
+        <h3>📋 Orders — Table <span id="ordersTableNum">01</span></h3>
+        <button class="btn-icon" id="ordersClose" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="orders-list" id="ordersList">
+          <div class="orders-loading">Loading orders...</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="ordersNewOrder">← New Order</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Edit Order Modal ─── -->
+  <div class="modal-overlay" id="editOrderModal">
+    <div class="modal-content modal-edit-order">
+      <div class="modal-header">
+        <div>
+          <h3>✏️ Edit Order #<span id="editOrderId"></span></h3>
+          <span class="edit-order-table">Table <span id="editOrderTable"></span></span>
+        </div>
+        <span class="badge-status" id="editOrderStatus">pending</span>
+      </div>
+      <div class="modal-body">
+        <!-- Current items in the order -->
+        <div class="edit-section">
+          <label class="edit-section-label">Current Items</label>
+          <div id="editOrderItems" class="edit-items-list"></div>
+        </div>
+
+        <!-- Add items from menu -->
+        <div class="edit-section">
+          <label class="edit-section-label">Add Items from Menu</label>
+          <div class="edit-category-tabs" id="editCategoryTabs">
+            <button class="edit-cat-tab active" data-category="starters">🥟 Starters</button>
+            <button class="edit-cat-tab" data-category="mains">🍛 Mains</button>
+            <button class="edit-cat-tab" data-category="desserts">🍨 Desserts</button>
+            <button class="edit-cat-tab" data-category="drinks">🥤 Drinks</button>
+          </div>
+          <div class="edit-menu-grid" id="editMenuGrid"></div>
+        </div>
+
+        <!-- Quick modifier for new items -->
+        <div class="edit-section" id="editAddSection" style="display:none;">
+          <label class="edit-section-label">Modifiers for <span id="editAddItemName"></span></label>
+          <textarea id="editAddModifier" rows="2" placeholder="e.g., No onions, extra spicy..."></textarea>
+          <div class="edit-quick-mods">
+            <button class="quick-mod" data-mod="No onions">No onions</button>
+            <button class="quick-mod" data-mod="Extra spicy">Extra spicy</button>
+            <button class="quick-mod" data-mod="Less oil">Less oil</button>
+            <button class="quick-mod" data-mod="Well done">Well done</button>
+            <button class="quick-mod" data-mod="Ice on side">Ice on side</button>
+            <button class="quick-mod" data-mod="No ice">No ice</button>
+          </div>
+          <div class="quantity-control">
+            <button class="qty-btn" id="editAddQtyDec">−</button>
+            <span class="qty-value" id="editAddQtyValue">1</span>
+            <button class="qty-btn" id="editAddQtyInc">+</button>
+          </div>
+          <button class="btn btn-primary" id="editAddConfirm" style="margin-top:12px;width:100%;">Add to Order</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="editOrderCancel">Cancel</button>
+        <button class="btn btn-primary" id="editOrderSave">💾 Save Changes</button>
       </div>
     </div>
   </div>

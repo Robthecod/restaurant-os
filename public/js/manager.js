@@ -30,12 +30,22 @@
     editCancel: $('#editCancel'),
     editSave: $('#editSave'),
     toastContainer: $('#toastContainer'),
+    mgrSubtitle: $('#mgrSubtitle'),
+    menuView: $('#menuView'),
+    analyticsView: $('#analyticsView'),
+    analyticsLoading: $('#analyticsLoading'),
+    analyticsContent: $('#analyticsContent'),
+    analyticsSummary: $('#analyticsSummary'),
+    analyticsPeriods: $('#analyticsPeriods'),
+    topDishesList: $('#topDishesList'),
+    timeSlotsList: $('#timeSlotsList'),
   };
 
   // ─── Init ────────────────────────────────────────────────────────────
   function init() {
     setupSocket();
     fetchMenu();
+    fetchAnalytics();
     setupEventListeners();
   }
 
@@ -279,8 +289,160 @@
     }, 3000);
   }
 
+  // ─── Tab Switching ───────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.mgr-tab').forEach((t) => t.classList.remove('active'));
+    document.querySelector(`.mgr-tab[data-tab="${tab}"]`).classList.add('active');
+
+    if (tab === 'menu') {
+      dom.menuView.style.display = '';
+      dom.analyticsView.style.display = 'none';
+      dom.mgrSubtitle.textContent = 'Menu Administration';
+    } else {
+      dom.menuView.style.display = 'none';
+      dom.analyticsView.style.display = '';
+      dom.mgrSubtitle.textContent = 'Sales Analytics';
+      // Refresh analytics
+      fetchAnalytics();
+    }
+  }
+
+  // ─── Fetch Analytics ─────────────────────────────────────────────────
+  async function fetchAnalytics() {
+    dom.analyticsLoading.style.display = '';
+    dom.analyticsContent.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/analytics');
+      const data = await res.json();
+      renderAnalytics(data);
+      dom.analyticsLoading.style.display = 'none';
+      dom.analyticsContent.style.display = '';
+    } catch (err) {
+      console.error('Failed to fetch analytics:', err);
+      dom.analyticsLoading.innerHTML = `
+        <div class="preview-empty">
+          <div class="empty-icon">⚠️</div>
+          <div>Failed to load analytics. <button class="btn btn-secondary btn-sm" onclick="location.reload()">Retry</button></div>
+        </div>
+      `;
+    }
+  }
+
+  // ─── Render Analytics ────────────────────────────────────────────────
+  function renderAnalytics(data) {
+    renderSummary(data.summary);
+    renderPeriods(data.periods);
+    renderTopDishes(data.topDishes);
+    renderTimeSlots(data.timeSlots);
+  }
+
+  function renderSummary(summary) {
+    dom.analyticsSummary.innerHTML = `
+      <div class="analytics-stat-card highlight">
+        <span class="analytics-stat-icon">💰</span>
+        <span class="analytics-stat-value">₹${summary.totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+        <span class="analytics-stat-label">Total Revenue</span>
+      </div>
+      <div class="analytics-stat-card">
+        <span class="analytics-stat-icon">📦</span>
+        <span class="analytics-stat-value">${summary.totalOrders}</span>
+        <span class="analytics-stat-label">Orders Completed</span>
+      </div>
+      <div class="analytics-stat-card">
+        <span class="analytics-stat-icon">🍽️</span>
+        <span class="analytics-stat-value">${summary.totalItemsSold}</span>
+        <span class="analytics-stat-label">Items Sold</span>
+      </div>
+      <div class="analytics-stat-card">
+        <span class="analytics-stat-icon">📊</span>
+        <span class="analytics-stat-value">₹${summary.averageOrderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+        <span class="analytics-stat-label">Avg Order Value</span>
+      </div>
+    `;
+  }
+
+  function renderPeriods(periods) {
+    dom.analyticsPeriods.innerHTML = `
+      <div class="period-card">
+        <span class="period-label">Today</span>
+        <span class="period-revenue">₹${periods.today.revenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+        <span class="period-orders">${periods.today.orders} order${periods.today.orders !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="period-card">
+        <span class="period-label">This Week</span>
+        <span class="period-revenue">₹${periods.thisWeek.revenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+        <span class="period-orders">${periods.thisWeek.orders} order${periods.thisWeek.orders !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="period-card">
+        <span class="period-label">This Month</span>
+        <span class="period-revenue">₹${periods.thisMonth.revenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+        <span class="period-orders">${periods.thisMonth.orders} order${periods.thisMonth.orders !== 1 ? 's' : ''}</span>
+      </div>
+    `;
+  }
+
+  function renderTopDishes(dishes) {
+    if (!dishes || dishes.length === 0) {
+      dom.topDishesList.innerHTML = '<div class="analytics-empty">No completed orders yet</div>';
+      return;
+    }
+
+    const maxCount = dishes[0].count;
+
+    dom.topDishesList.innerHTML = dishes
+      .map(
+        (d) => `
+        <div class="dish-row">
+          <span class="dish-rank">#${d.rank}</span>
+          <div class="dish-info">
+            <span class="dish-name">${d.name}</span>
+            <span class="dish-revenue">₹${d.revenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+          </div>
+          <div class="dish-bar-wrap">
+            <div class="dish-bar" style="width:${(d.count / maxCount) * 100}%"></div>
+          </div>
+          <span class="dish-count">${d.count}</span>
+        </div>
+      `
+      )
+      .join('');
+  }
+
+  function renderTimeSlots(slots) {
+    if (!slots || slots.every((s) => s.orders === 0)) {
+      dom.timeSlotsList.innerHTML = '<div class="analytics-empty">No time-of-day data yet</div>';
+      return;
+    }
+
+    const maxRevenue = Math.max(...slots.map((s) => s.revenue));
+
+    dom.timeSlotsList.innerHTML = slots
+      .filter((s) => s.orders > 0)
+      .map(
+        (s) => `
+        <div class="slot-row">
+          <span class="slot-label">${s.label}</span>
+          <div class="slot-bar-wrap">
+            <div class="slot-bar" style="width:${maxRevenue > 0 ? (s.revenue / maxRevenue) * 100 : 0}%"></div>
+          </div>
+          <div class="slot-stats">
+            <span class="slot-revenue">₹${s.revenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            <span class="slot-orders">${s.orders} order${s.orders !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+      `
+      )
+      .join('');
+  }
+
   // ─── Event Listeners ─────────────────────────────────────────────────
   function setupEventListeners() {
+    // Tab switching
+    document.querySelectorAll('.mgr-tab').forEach((tab) => {
+      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
+
     // Add item form
     dom.menuForm.addEventListener('submit', (e) => {
       e.preventDefault();

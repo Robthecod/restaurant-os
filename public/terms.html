@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service — Roux</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --border-color: #e2e8f0;
+      --border-hover: #cbd5e1;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-amber: #d97706;
+      --accent-green: #16a34a;
+      --gradient-primary: linear-gradient(135deg, #d97706, #b45309);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --transition: all 0.2s ease;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    /* Ambient background */
+    .bg-ambient {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
+      background: linear-gradient(180deg, #fefce8 0%, #f8fafc 400px, #ffffff 100%);
+    }
+    .bg-orb {
+      position: absolute;
+      border-radius: 50%;
+      will-change: transform;
+      pointer-events: none;
+    }
+    .bg-orb-1 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle at 30% 40%, rgba(217,119,6,0.1) 0%, transparent 70%);
+      filter: blur(90px);
+      top: -10%; left: -8%;
+      animation: orbFloat1 30s ease-in-out infinite;
+    }
+    .bg-orb-2 {
+      width: 350px; height: 350px;
+      background: radial-gradient(circle at 60% 30%, rgba(251,191,36,0.07) 0%, transparent 70%);
+      filter: blur(80px);
+      bottom: 10%; right: -5%;
+      animation: orbFloat2 25s ease-in-out infinite;
+    }
+    @keyframes orbFloat1 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(60px, -50px) scale(1.1); }
+    }
+    @keyframes orbFloat2 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-50px, 30px) scale(1.08); }
+    }
+
+    .container { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+
+    /* ─── Navbar ─── */
+    .navbar {
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(20px);
+    }
+    .navbar .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 1.2rem;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+    .navbar-brand .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--gradient-primary);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+    .nav-back {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-back:hover { color: var(--text-primary); }
+
+    /* ─── Content ─── */
+    .legal-content {
+      padding: 60px 0 80px;
+    }
+    .legal-header {
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .legal-header h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+    .legal-header .last-updated {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .legal-section {
+      margin-bottom: 32px;
+    }
+    .legal-section h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+    .legal-section h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      margin-top: 20px;
+      color: var(--text-primary);
+    }
+    .legal-section p {
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+    }
+    .legal-section ul {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0 20px;
+    }
+    .legal-section ul li {
+      color: var(--text-secondary);
+      padding: 6px 0 6px 24px;
+      position: relative;
+      font-size: 0.95rem;
+    }
+    .legal-section ul li::before {
+      content: '•';
+      position: absolute;
+      left: 8px;
+      color: var(--accent-amber);
+      font-weight: 700;
+    }
+    .legal-highlight {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin: 20px 0;
+      font-size: 0.9rem;
+      color: #92400e;
+    }
+    .toc-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 24px 28px;
+      margin-bottom: 32px;
+    }
+    .toc-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .toc-card ol {
+      padding-left: 20px;
+    }
+    .toc-card ol li {
+      padding: 4px 0;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .toc-card ol li a {
+      color: var(--accent-amber);
+      text-decoration: none;
+    }
+    .toc-card ol li a:hover { text-decoration: underline; }
+
+    /* ─── Footer ─── */
+    .legal-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 24px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    .legal-footer a {
+      color: var(--accent-amber);
+      text-decoration: none;
+    }
+
+    @media (max-width: 640px) {
+      .legal-header h1 { font-size: 1.6rem; }
+      .legal-content { padding: 40px 0 60px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .bg-orb { animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Background -->
+  <div class="bg-ambient" aria-hidden="true">
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+  </div>
+
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <span class="logo-icon">🥘</span>
+        Roux
+      </a>
+      <a href="/" class="nav-back">← Back to Home</a>
+    </div>
+  </nav>
+
+  <div class="legal-content">
+    <div class="container">
+      <div class="legal-header">
+        <h1>Terms of Service</h1>
+        <p class="last-updated">Last updated: July 13, 2026</p>
+      </div>
+
+      <div class="toc-card">
+        <h3>📑 Table of Contents</h3>
+        <ol>
+          <li><a href="#acceptance">Acceptance of Terms</a></li>
+          <li><a href="#description">Description of Service</a></li>
+          <li><a href="#accounts">User Accounts & Registration</a></li>
+          <li><a href="#subscriptions">Subscriptions & Payments</a></li>
+          <li><a href="#obligations">User Obligations</a></li>
+          <li><a href="#ip">Intellectual Property</a></li>
+          <li><a href="#limitation">Limitation of Liability</a></li>
+          <li><a href="#warranty">Disclaimer of Warranties</a></li>
+          <li><a href="#termination">Termination</a></li>
+          <li><a href="#privacy">Privacy</a></li>
+          <li><a href="#governing">Governing Law</a></li>
+          <li><a href="#changes">Changes to Terms</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ol>
+      </div>
+
+      <div class="legal-section" id="acceptance">
+        <h2>1. Acceptance of Terms</h2>
+        <p>By accessing or using Roux ("the Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not access or use the Service. These Terms apply to all users, including restaurant owners, managers, waitstaff, and kitchen personnel.</p>
+        <p>We reserve the right to update these Terms at any time. Continued use of the Service after changes constitutes acceptance of the new Terms.</p>
+      </div>
+
+      <div class="legal-section" id="description">
+        <h2>2. Description of Service</h2>
+        <p>Roux is a real-time restaurant management platform that provides:</p>
+        <ul>
+          <li>A mobile-optimized waiter ordering interface (Waiter Pad).</li>
+          <li>A kitchen display system for order tracking (Kitchen Display).</li>
+          <li>An administrative panel for menu and analytics management (Manager Panel).</li>
+          <li>Real-time synchronization across all devices via WebSocket technology.</li>
+        </ul>
+        <p>The Service is available as a self-hosted local LAN solution or as a cloud-hosted SaaS subscription, depending on your plan.</p>
+      </div>
+
+      <div class="legal-section" id="accounts">
+        <h2>3. User Accounts & Registration</h2>
+        <h3>3.1 Account Creation</h3>
+        <p>To use the Service, you must create an account with accurate and complete information. You are responsible for maintaining the confidentiality of your login credentials.</p>
+        <h3>3.2 Account Responsibilities</h3>
+        <ul>
+          <li>You are responsible for all activity occurring under your account.</li>
+          <li>You must promptly notify us of any unauthorized use of your account.</li>
+          <li>We are not liable for any loss or damage arising from unauthorized account use.</li>
+          <li>You may not share your account credentials with unauthorized personnel.</li>
+        </ul>
+        <h3>3.3 Eligibility</h3>
+        <p>You must be at least 18 years old to create an account. By registering, you represent that you meet this requirement.</p>
+      </div>
+
+      <div class="legal-section" id="subscriptions">
+        <h2>4. Subscriptions & Payments</h2>
+        <h3>4.1 Pricing</h3>
+        <p>Subscription fees are as displayed on our pricing page. All fees are in Indian Rupees (₹) and are exclusive of applicable taxes.</p>
+        <h3>4.2 Billing</h3>
+        <ul>
+          <li>Paid plans are billed monthly in advance.</li>
+          <li>Payments are processed through our secure payment partners.</li>
+          <li>We accept major credit cards, UPI, and net banking.</li>
+        </ul>
+        <h3>4.3 Refunds</h3>
+        <p>We offer a 14-day money-back guarantee on all paid plans. Refund requests beyond 14 days are evaluated on a case-by-case basis.</p>
+        <h3>4.4 Plan Changes</h3>
+        <p>You may upgrade or downgrade your plan at any time. Upgrades take effect immediately. Downgrades take effect at the end of the current billing cycle.</p>
+      </div>
+
+      <div class="legal-section" id="obligations">
+        <h2>5. User Obligations</h2>
+        <p>You agree not to:</p>
+        <ul>
+          <li>Use the Service for any unlawful purpose or in violation of any applicable laws.</li>
+          <li>Attempt to disrupt, compromise, or gain unauthorized access to the Service.</li>
+          <li>Reverse engineer, decompile, or disassemble any part of the Service.</li>
+          <li>Use the Service to transmit malware, viruses, or harmful code.</li>
+          <li>Interfere with other users' access to the Service.</li>
+          <li>Submit false or misleading information through the Service.</li>
+          <li>Use automated scripts or bots to interact with the Service without authorization.</li>
+        </ul>
+        <div class="legal-highlight">
+          <strong>Note for Self-Hosted Deployments:</strong> If you deploy Roux on your own local network, you are responsible for maintaining the security of your server, network, and data. We provide the software but are not responsible for your infrastructure.
+        </div>
+      </div>
+
+      <div class="legal-section" id="ip">
+        <h2>6. Intellectual Property</h2>
+        <h3>6.1 Our IP</h3>
+        <p>The Service, including its code, design, logos, and brand elements, is owned by Roux Technologies and is protected by copyright, trademark, and other intellectual property laws.</p>
+        <h3>6.2 Your Data</h3>
+        <p>You retain all rights to your menu data, order information, and restaurant content. By using the Service, you grant us a limited license to process this data solely for the purpose of providing the Service.</p>
+        <h3>6.3 Feedback</h3>
+        <p>Any suggestions, feedback, or feature requests you provide become our intellectual property and may be incorporated into the Service without compensation.</p>
+      </div>
+
+      <div class="legal-section" id="limitation">
+        <h2>7. Limitation of Liability</h2>
+        <p>To the maximum extent permitted by applicable law:</p>
+        <ul>
+          <li>Roux shall not be liable for any indirect, incidental, special, consequential, or punitive damages.</li>
+          <li>Our total liability for any claim arising from the Service shall not exceed the amount you paid us in the 12 months preceding the claim.</li>
+          <li>We are not liable for any damages resulting from service interruptions, data loss, or delayed orders — especially in self-hosted deployments where we do not control the infrastructure.</li>
+          <li>We are not responsible for the accuracy, completeness, or timeliness of menu or order data entered by users.</li>
+        </ul>
+      </div>
+
+      <div class="legal-section" id="warranty">
+        <h2>8. Disclaimer of Warranties</h2>
+        <p>Roux warrants that the Service will be uninterrupted, timely, secure, and error-free, provided that the user has fulfilled and continues to fulfill all conditions and obligations under these Terms of Service, including but not limited to timely payment of applicable fees, compliance with acceptable use policies, and maintenance of required infrastructure for self-hosted deployments. Any interruption caused by the user's failure to meet these conditions shall not constitute a breach of this warranty.</p>
+        <p>Except as expressly stated in this section, we explicitly disclaim all other warranties, including merchantability, fitness for a particular purpose, and non-infringement, to the maximum extent permitted by applicable law.</p>
+      </div>
+
+      <div class="legal-section" id="termination">
+        <h2>9. Termination</h2>
+        <h3>9.1 By You</h3>
+        <p>You may terminate your account at any time by contacting us. Upon termination, your data will be deleted within 30 days unless otherwise required by law.</p>
+        <h3>9.2 By Us</h3>
+        <p>We may suspend or terminate your access to the Service if:</p>
+        <ul>
+          <li>You violate these Terms.</li>
+          <li>Your use of the Service poses a security risk.</li>
+          <li>Required by law or regulatory authority.</li>
+          <li>You fail to pay applicable fees.</li>
+        </ul>
+        <h3>9.3 Effect of Termination</h3>
+        <p>Upon termination, your right to use the Service ceases immediately. We may delete your data after 30 days. Sections 6, 7, 8, and 11 of these Terms survive termination.</p>
+      </div>
+
+      <div class="legal-section" id="privacy">
+        <h2>10. Privacy</h2>
+        <p>Your use of the Service is governed by our <a href="/privacy.html" style="color:var(--accent-amber);">Privacy Policy</a>, which explains how we collect, use, and protect your personal information. By using the Service, you consent to our data practices as described in the Privacy Policy.</p>
+      </div>
+
+      <div class="legal-section" id="governing">
+        <h2>11. Governing Law</h2>
+        <p>These Terms are governed by the laws of India. Any disputes arising from these Terms shall be resolved in the courts of India. If you are accessing the Service from outside India, you do so on your own initiative and are responsible for compliance with local laws.</p>
+      </div>
+
+      <div class="legal-section" id="changes">
+        <h2>12. Changes to Terms</h2>
+        <p>We may revise these Terms at any time. Material changes will be notified via email or through the Service. Your continued use of the Service after changes take effect constitutes acceptance of the revised Terms.</p>
+        <p>We encourage you to review these Terms periodically. The "Last updated" date at the top of this page indicates when the latest changes were made.</p>
+      </div>
+
+      <div class="legal-section" id="contact">
+        <h2>13. Contact</h2>
+        <p>For questions, concerns, or legal inquiries regarding these Terms, please contact us:</p>
+        <ul>
+          <li><strong>Email:</strong> legal@roux.app</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer class="legal-footer">
+    <div class="container">
+      <p>&copy; 2026 Roux. All rights reserved. | <a href="/">Home</a> | <a href="/privacy.html">Privacy Policy</a></p>
+    </div>
+  </footer>
+
+  <script>
+    // Smooth scroll for TOC links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

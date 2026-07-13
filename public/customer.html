@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Menu — Roux</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/customer.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; padding: 0; }
+  </style>
+</head>
+<body class="customer-page">
+
+  <!-- ─── Header ──────────────────────────────────────────────────── -->
+  <header class="customer-header">
+    <div class="customer-brand">
+      <span class="customer-logo">🥘</span>
+      <span class="customer-brand-text">Roux</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="customer-table-badge" id="custTableBadge">Table 01</span>
+      <div class="customer-conn">
+        <span class="conn-indicator" id="custConnDot"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── Overview ────────────────────────────────────────────────── -->
+  <div class="customer-overview" id="custOverview">
+    <span class="emoji-decor">🍽️</span>
+    <h1>Welcome to Roux!</h1>
+    <p>Browse our menu, customize your order, and
+       <br>we'll take care of the rest. 🧑‍🍳</p>
+  </div>
+
+  <!-- ─── Category Tabs ───────────────────────────────────────────── -->
+  <div class="customer-categories" id="custCategories"></div>
+
+  <!-- ─── Menu Grid ──────────────────────────────────────────────── -->
+  <div class="customer-menu">
+    <div class="customer-loading" id="custMenuLoading">
+      <div class="spinner"></div>
+      <div>Loading our menu...</div>
+    </div>
+    <div class="customer-menu-grid" id="custMenuGrid"></div>
+  </div>
+
+  <!-- ─── Cart Bar ────────────────────────────────────────────────── -->
+  <div class="customer-cart-bar" id="custCartBar">
+    <div class="customer-cart-info">
+      <span class="customer-cart-label">Your Order</span>
+      <span class="customer-cart-count" id="custCartCount">0 items</span>
+      <span class="customer-cart-total" id="custCartTotal">₹0.00</span>
+    </div>
+    <button class="customer-cart-place-order" id="custPlaceOrder" disabled>
+      🛒 Place Order
+    </button>
+  </div>
+
+  <!-- ─── Item Modal ──────────────────────────────────────────────── -->
+  <div class="customer-modal-overlay" id="custModalOverlay">
+    <div class="customer-modal">
+      <div class="customer-modal-handle"></div>
+
+      <div class="customer-modal-header">
+        <span class="customer-modal-icon" id="custModalIcon">🍽️</span>
+        <div class="customer-modal-header-text">
+          <h3 id="custModalItemName">Item Name</h3>
+          <div class="price" id="custModalItemPrice">₹0.00</div>
+        </div>
+      </div>
+
+      <div class="customer-modal-body">
+        <label>Special instructions</label>
+        <div class="customer-quick-mods">
+          <button class="customer-qmod" data-mod="No onions">🧅 No onions</button>
+          <button class="customer-qmod" data-mod="Extra spicy">🌶️ Extra spicy</button>
+          <button class="customer-qmod" data-mod="Less oil">🫒 Less oil</button>
+          <button class="customer-qmod" data-mod="Well done">🔥 Well done</button>
+        </div>
+        <textarea id="custModalModifier" placeholder="Anything else? (e.g., no cheese, extra sauce...)"></textarea>
+
+        <div class="customer-qty-control">
+          <button class="customer-qty-btn" id="custModalQtyDec">−</button>
+          <span class="customer-qty-value" id="custModalQtyValue">1</span>
+          <button class="customer-qty-btn" id="custModalQtyInc">+</button>
+        </div>
+      </div>
+
+      <div class="customer-modal-footer">
+        <button class="btn-secondary" id="custModalSkip">Skip →</button>
+        <button class="btn-primary" id="custModalAdd">Add to Order</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Confirmation Screen ─────────────────────────────────────── -->
+  <div class="customer-confirmation" id="custConfirmation" style="display:none;">
+    <span class="check-icon">✅</span>
+    <h2>Order Placed! 🎉</h2>
+    <div class="order-num" id="custConfirmOrderNum">#0</div>
+    <p>
+      Your order is on its way to the kitchen.<br>
+      Sit back, relax, and we'll bring it to you!
+    </p>
+    <button class="track-btn btn" style="display:none;margin-bottom:12px;">
+      📍 Track My Order
+    </button>
+    <button class="new-order-btn btn" style="display:none;">
+      🍽️ Order More
+    </button>
+  </div>
+
+  <!-- ─── Order Status Overlay ─────────────────────────────────────── -->
+  <div class="customer-order-status" id="custOrderStatus">
+    <span class="status-icon" id="custStatusIcon">⏳</span>
+    <h2 id="custStatusTitle">Order received!</h2>
+    <div class="order-ref" id="custStatusRef">Table 01 · #0</div>
+
+    <div class="status-timeline" id="custStatusTimeline"></div>
+
+    <button class="btn" id="custStatusNewOrder">🍽️ Order Again</button>
+  </div>
+
+  <!-- ─── Toast Container ─────────────────────────────────────────── -->
+  <div class="customer-toast-container" id="custToastContainer"></div>
+
+  <!-- ─── Scripts ────────────────────────────────────────────────── -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/socket-client.js"></script>
+  <script src="/js/customer.js"></script>
+</body>
+</html>

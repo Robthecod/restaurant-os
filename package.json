@@ -1,13 +1,13 @@
 {
-  "name": "restaurant-orchestration-platform",
+  "name": "roux",
   "version": "1.0.0",
-  "description": "Real-Time Restaurant Orchestration Platform - Bridging front-of-house, kitchen, and management",
+  "description": "Roux — Real-Time Restaurant Engine. Waiter Pad, Kitchen Display, Manager Panel & Customer QR ordering.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
   },
-  "keywords": ["restaurant", "pos", "kds", "kitchen-display", "socket.io", "real-time"],
+  "keywords": ["restaurant", "pos", "kds", "kitchen-display", "socket.io", "real-time", "qr-ordering"],
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",

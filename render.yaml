@@ -1,0 +1,15 @@
+# Roux — Render Deployment Configuration
+# https://render.com/docs/infrastructure-as-code
+
+services:
+  - type: web
+    name: roux
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+    autoDeploy: true

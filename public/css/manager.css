@@ -399,7 +399,335 @@
   justify-content: flex-end;
 }
 
+/* ─── Tab Navigation ─────────────────────────────────────────────────── */
+.mgr-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 24px;
+}
+
+.mgr-tab {
+  padding: 14px 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mgr-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.03);
+}
+
+.mgr-tab.active {
+  color: var(--accent-gold);
+  border-bottom-color: var(--accent-gold);
+}
+
+/* ─── Analytics View ────────────────────────────────────────────────── */
+.analytics-view {
+  padding: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.analytics-loading {
+  padding: 60px 0;
+}
+
+.analytics-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Summary cards */
+.analytics-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.analytics-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 20px 18px;
+  text-align: center;
+  transition: var(--transition);
+}
+
+.analytics-stat-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.analytics-stat-card.highlight {
+  border-color: rgba(217,119,6,0.2);
+  background: linear-gradient(135deg, rgba(217,119,6,0.04), transparent);
+}
+
+.analytics-stat-icon {
+  font-size: 1.4rem;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.analytics-stat-value {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.analytics-stat-card.highlight .analytics-stat-value {
+  color: var(--accent-gold);
+}
+
+.analytics-stat-label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Period cards */
+.analytics-periods {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.period-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.period-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 80px;
+}
+
+.period-revenue {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  margin-right: auto;
+}
+
+.period-orders {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Two-column grid */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.analytics-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+.analytics-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Top dishes */
+.top-dishes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dish-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.dish-row:last-child {
+  border-bottom: none;
+}
+
+.dish-rank {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 24px;
+}
+
+.dish-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dish-name {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.dish-revenue {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.dish-bar-wrap {
+  flex: 1;
+  max-width: 120px;
+  height: 8px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dish-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-gold), #f59e0b);
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.dish-count {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* Time slots */
+.time-slots-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slot-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.slot-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 130px;
+  color: var(--text-secondary);
+}
+
+.slot-bar-wrap {
+  flex: 1;
+  height: 10px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.slot-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-gold), #f59e0b);
+  border-radius: 5px;
+  transition: width 0.6s ease;
+}
+
+.slot-stats {
+  text-align: right;
+  min-width: 120px;
+}
+
+.slot-revenue {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.slot-orders {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.analytics-empty {
+  text-align: center;
+  padding: 30px 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
 /* ─── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .analytics-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+  .analytics-periods {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .analytics-summary {
+    grid-template-columns: 1fr;
+  }
+  .mgr-tabs {
+    padding: 0 12px;
+    overflow-x: auto;
+  }
+  .mgr-tab {
+    padding: 12px 18px;
+    font-size: 0.85rem;
+  }
+  .analytics-view {
+    padding: 16px;
+  }
+  .slot-label {
+    min-width: 100px;
+    font-size: 0.78rem;
+  }
+  .slot-stats {
+    min-width: 80px;
+  }
+}
+
+/* ─── Responsive (existing) ──────────────────────────────────────────── */
 @media (max-width: 900px) {
   .mgr-layout {
     grid-template-columns: 1fr;

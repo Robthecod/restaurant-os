@@ -1,4 +1,4 @@
-const CACHE_NAME = 'restaurant-os-v1';
+const CACHE_NAME = 'roux-v1';
 
 // Assets to cache on install
 const PRECACHE = [

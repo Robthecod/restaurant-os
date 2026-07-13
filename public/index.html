@@ -3,208 +3,1946 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Restaurant OS — Landing</title>
+  <meta name="description" content="Roux is a real-time restaurant management platform — Waiter Pad, Kitchen Display, and Manager Panel. Works on any device. Made in India.">
+  <meta name="keywords" content="restaurant management, POS, kitchen display system, waiter app, restaurant software, India">
+  <meta name="author" content="Roux Technologies">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://roux.app/">
+
+  <!-- Open Graph / Social Sharing -->
+  <meta property="og:title" content="Roux — Real-Time Restaurant Engine">
+  <meta property="og:description" content="Real-time ordering, kitchen display, and management — all in one lightweight system. No expensive hardware needed.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://roux.app/">
+  <meta property="og:locale" content="en_IN">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Roux — Real-Time Restaurant Engine">
+  <meta name="twitter:description" content="Real-time ordering, kitchen display, and management — all in one lightweight system.">
+
+  <!-- PWA / Icons -->
   <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥘</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥘</text></svg>">
+  <meta name="theme-color" content="#d97706">
+
+  <title>Roux — Real-Time Restaurant Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
+    /* ─── Reset & Design Tokens ───────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-elevated: #f1f5f9;
+      --border-color: #e2e8f0;
+      --border-hover: #cbd5e1;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-amber: #d97706;
+      --accent-green: #16a34a;
+      --accent-blue: #2563eb;
+      --accent-purple: #7c3aed;
+      --accent-red: #dc2626;
+      --gradient-primary: linear-gradient(135deg, #d97706, #b45309);
+      --gradient-cta: linear-gradient(135deg, #d97706, #b45309);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.08);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --transition: all 0.2s ease;
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+      --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    html { scroll-behavior: smooth; }
     body {
+      font-family: var(--font);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Ambient Background ──────────────────────────────────────── */
+    .bg-ambient {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
+      background: linear-gradient(180deg, #fefce8 0%, #f8fafc 500px, #ffffff 100%);
+    }
+
+    /* Grain texture overlay */
+    .bg-ambient::after {
+      content: '';
+      position: absolute;
+      inset: -50%;
+      width: 200%;
+      height: 200%;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      opacity: 0.025;
+      pointer-events: none;
+      animation: grainShift 8s steps(6) infinite;
+    }
+
+    @keyframes grainShift {
+      0% { transform: translate(0, 0); }
+      10% { transform: translate(-5%, -5%); }
+      20% { transform: translate(-10%, 5%); }
+      30% { transform: translate(5%, -10%); }
+      40% { transform: translate(-5%, 15%); }
+      50% { transform: translate(-10%, 5%); }
+      60% { transform: translate(15%, 0); }
+      70% { transform: translate(0, 10%); }
+      80% { transform: translate(-15%, 0); }
+      90% { transform: translate(10%, 5%); }
+    }
+
+    /* Vignette overlay for depth */
+    .bg-vignette {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 35%, rgba(255,255,255,0.35) 65%, rgba(255,255,255,0.55) 100%);
+    }
+
+    /* Morphing liquid blobs with dynamic colors */
+    .bg-blobs {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+      will-change: transform;
+    }
+
+    .bg-blob {
+      position: absolute;
+      border-radius: 50%;
+      will-change: transform, border-radius;
+      animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+    }
+    /* Blob 1 — Vibrant Amber/Copper (dominant warm accent) */
+    .bg-blob-1 {
+      width: 620px;
+      height: 520px;
+      background: radial-gradient(circle at 30% 35%, rgba(217,119,6,0.55) 0%, rgba(180,80,20,0.20) 35%, rgba(217,119,6,0.06) 65%, transparent 80%);
+      top: -18%;
+      left: -12%;
+      animation: blobMorph1 8s infinite alternate;
+      border-radius: 58% 42% 48% 52% / 45% 55% 45% 55%;
+    }
+    /* Blob 2 — Deep Rose/Magenta (vibrant contrast) */
+    .bg-blob-2 {
+      width: 500px;
+      height: 540px;
+      background: radial-gradient(circle at 65% 30%, rgba(200,50,80,0.35) 0%, rgba(217,80,120,0.15) 35%, rgba(217,119,6,0.04) 65%, transparent 80%);
+      bottom: 0%;
+      right: -8%;
+      animation: blobMorph2 10s infinite alternate;
+      border-radius: 42% 58% 52% 48% / 55% 40% 60% 45%;
+    }
+    /* Blob 3 — Deep Indigo/Purple (depth & mystery) */
+    .bg-blob-3 {
+      width: 460px;
+      height: 420px;
+      background: radial-gradient(circle at 50% 55%, rgba(100,50,180,0.25) 0%, rgba(120,60,160,0.10) 35%, rgba(147,51,234,0.03) 65%, transparent 80%);
+      top: 22%;
+      left: 28%;
+      animation: blobMorph3 7s infinite alternate;
+      border-radius: 62% 38% 44% 56% / 38% 58% 42% 62%;
+    }
+    /* Blob 4 — Warm Teal/Gold (surprise accent) */
+    .bg-blob-4 {
+      width: 380px;
+      height: 420px;
+      background: radial-gradient(circle at 45% 50%, rgba(50,180,150,0.22) 0%, rgba(80,160,130,0.10) 35%, rgba(251,191,36,0.04) 65%, transparent 80%);
+      top: 52%;
+      left: 62%;
+      animation: blobMorph4 9s infinite alternate;
+      border-radius: 45% 55% 52% 48% / 55% 48% 52% 45%;
+    }
+
+    @keyframes blobMorph1 {
+      0% { border-radius: 58% 42% 48% 52% / 45% 55% 45% 55%; transform: translate(0, 0) scale(1) rotate(0deg); }
+      25% { border-radius: 38% 62% 65% 35% / 62% 38% 62% 38%; transform: translate(70px, -50px) scale(1.12) rotate(5deg); }
+      50% { border-radius: 52% 48% 35% 65% / 40% 65% 35% 60%; transform: translate(-40px, 60px) scale(0.92) rotate(-4deg); }
+      75% { border-radius: 45% 55% 60% 40% / 65% 35% 55% 45%; transform: translate(50px, 25px) scale(1.08) rotate(6deg); }
+      100% { border-radius: 55% 45% 40% 60% / 35% 50% 50% 65%; transform: translate(-25px, -35px) scale(1) rotate(-2deg); }
+    }
+    @keyframes blobMorph2 {
+      0% { border-radius: 42% 58% 52% 48% / 55% 40% 60% 45%; transform: translate(0, 0) scale(1) rotate(0deg); }
+      33% { border-radius: 62% 38% 38% 62% / 38% 68% 32% 62%; transform: translate(-60px, 50px) scale(1.15) rotate(-7deg); }
+      66% { border-radius: 48% 52% 65% 35% / 62% 42% 58% 38%; transform: translate(50px, -40px) scale(0.90) rotate(5deg); }
+      100% { border-radius: 52% 48% 42% 58% / 40% 55% 45% 60%; transform: translate(-20px, 30px) scale(1.05) rotate(-3deg); }
+    }
+    @keyframes blobMorph3 {
+      0% { border-radius: 62% 38% 44% 56% / 38% 58% 42% 62%; transform: translate(0, 0) scale(1) rotate(0deg); }
+      33% { border-radius: 35% 65% 62% 38% / 58% 38% 62% 42%; transform: translate(50px, -70px) scale(1.18) rotate(4deg); }
+      66% { border-radius: 52% 48% 35% 65% / 42% 58% 42% 58%; transform: translate(-60px, 35px) scale(0.92) rotate(-6deg); }
+      100% { border-radius: 42% 58% 65% 35% / 58% 35% 65% 42%; transform: translate(35px, -25px) scale(1.08) rotate(2deg); }
+    }
+    @keyframes blobMorph4 {
+      0% { border-radius: 45% 55% 52% 48% / 55% 48% 52% 45%; transform: translate(0, 0) scale(1) rotate(0deg); }
+      50% { border-radius: 62% 38% 42% 58% / 38% 62% 38% 62%; transform: translate(-40px, 50px) scale(1.14) rotate(5deg); }
+      100% { border-radius: 50% 50% 58% 42% / 48% 42% 58% 52%; transform: translate(30px, -35px) scale(0.93) rotate(-4deg); }
+    }
+
+    /* ─── Utility ─────────────────────────────────────────────────── */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .section { padding: 100px 0; }
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent-amber);
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+    }
+    .section-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      line-height: 1.7;
+    }
+    .text-center { text-align: center; }
+    .mx-auto { margin-left: auto; margin-right: auto; }
+
+    /* ─── Animations & Reveal ──────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(40px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 100ms; }
+    .reveal-delay-2 { transition-delay: 200ms; }
+    .reveal-delay-3 { transition-delay: 300ms; }
+    .reveal-delay-4 { transition-delay: 400ms; }
+    .reveal-delay-5 { transition-delay: 500ms; }
+    .reveal-delay-6 { transition-delay: 600ms; }
+
+    .hero-entrance {
+      animation: fadeUp 800ms var(--ease-out) forwards;
+    }
+    .hero-entrance-delay-1 { animation-delay: 100ms; }
+    .hero-entrance-delay-2 { animation-delay: 200ms; }
+    .hero-entrance-delay-3 { animation-delay: 350ms; }
+    .hero-entrance-delay-4 { animation-delay: 500ms; }
+    .hero-entrance-delay-5 { animation-delay: 650ms; }
+
+    /* ─── Buttons ─────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font);
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 14px 32px;
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      transition: transform 160ms var(--ease-out), box-shadow 250ms var(--ease-out), background 250ms var(--ease-out), border-color 250ms var(--ease-out);
+      text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+      will-change: transform;
+    }
+    .btn:active {
+      transform: scale(0.97);
+    }
+    .btn-primary {
+      background: var(--gradient-cta);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(217,119,6,0.2);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(217,119,6,0.3);
+    }
+    .btn-primary:active {
+      transform: scale(0.97) translateY(-1px);
+    }
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+    .btn-secondary:hover {
+      background: #f8fafc;
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-md);
+    }
+    .btn-secondary:active {
+      background: #f1f5f9;
+    }
+    .btn-lg { padding: 18px 40px; font-size: 1.05rem; border-radius: var(--radius-lg); }
+
+    /* ─── Navbar ──────────────────────────────────────────────────── */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      padding: 16px 0;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid transparent;
+      transition: var(--transition);
+    }
+    .navbar.scrolled { border-bottom-color: var(--border-color); }
+    .navbar .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 1.2rem;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+    .navbar-brand .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--gradient-primary);
+      border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
-      margin: 0;
-      padding: 20px;
+      font-size: 1.1rem;
     }
-    .landing {
-      max-width: 700px;
+    .nav-links { display: flex; align-items: center; gap: 32px; }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 200ms var(--ease-out);
+      position: relative;
+    }
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
       width: 100%;
-      text-align: center;
+      height: 2px;
+      background: var(--accent-amber);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 250ms var(--ease-out);
+      border-radius: 1px;
     }
-    .landing h1 {
-      font-size: 2.8rem;
-      margin-bottom: 0.3em;
-      background: linear-gradient(135deg, #f7971e, #ffd200);
+    @media (hover: hover) and (pointer: fine) {
+      .nav-links a:hover { color: var(--text-primary); }
+      .nav-links a:hover::after { transform: scaleX(1); }
+    }
+    .nav-cta { padding: 10px 24px; font-size: 0.85rem; }
+
+    /* ─── Hero ────────────────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      padding-top: 80px;
+    }
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .hero-bg::before {
+      content: '';
+      position: absolute;
+      top: -30%;
+      left: -10%;
+      width: 60%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, rgba(217,119,6,0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      bottom: -20%;
+      right: -10%;
+      width: 50%;
+      height: 80%;
+      background: radial-gradient(ellipse at center, rgba(37,99,235,0.04) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      padding: 8px 16px;
+      border-radius: 100px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #92400e;
+      margin-bottom: 24px;
+    }
+    .hero-tag .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: dotPulse 2s infinite;
+    }
+    @keyframes dotPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.04em;
+      margin-bottom: 20px;
+    }
+    .hero h1 .highlight {
+      background: var(--gradient-primary);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    .landing .subtitle {
-      color: #8899aa;
-      font-size: 1rem;
-      margin-bottom: 2.5rem;
+    .hero h1 .highlight-alt {
+      color: var(--accent-red);
     }
-    .landing .status-badge {
-      display: inline-flex;
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: 36px;
+      max-width: 520px;
+    }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+      margin-top: 50px;
+      padding-top: 30px;
+      border-top: 1px solid var(--border-color);
+    }
+    .hero-stat h3 { font-size: 1.8rem; font-weight: 800; }
+    .hero-stat h3 .gold { color: var(--accent-amber); }
+    .hero-stat h3 .blue { color: var(--accent-blue); }
+    .hero-stat h3 .green { color: var(--accent-green); }
+    .hero-stat p { font-size: 0.85rem; color: var(--text-muted); margin: 0; }
+
+    /* Mockup */
+    .hero-mockup {
+      position: relative;
+    }
+    .mockup-frame {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+    .mockup-header {
+      display: flex;
       align-items: center;
       gap: 8px;
-      background: #1a2a1a;
-      color: #4ade80;
-      border: 1px solid #2a4a2a;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      margin-bottom: 2rem;
+      padding: 14px 18px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border-color);
     }
-    .status-badge .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #4ade80;
-      animation: pulse-dot 1.5s ease-in-out infinite;
-    }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
-    .panel-grid {
+    .mockup-dots { display: flex; gap: 6px; }
+    .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .mockup-dot:nth-child(1) { background: #ef4444; }
+    .mockup-dot:nth-child(2) { background: #eab308; }
+    .mockup-dot:nth-child(3) { background: #22c55e; }
+    .mockup-title { font-size: 0.78rem; color: var(--text-muted); margin-left: 8px; font-weight: 500; }
+    .mockup-body {
+      padding: 20px;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-top: 1rem;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
-    .panel-card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 16px;
-      padding: 28px 20px;
-      text-decoration: none;
-      color: #e0e8f0;
-      transition: all 0.25s ease;
-      position: relative;
-      overflow: hidden;
+    .mockup-card {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      border: 1px solid var(--border-color);
     }
-    .panel-card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(255,255,255,0.2);
-      background: rgba(255,255,255,0.07);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    .mockup-card-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .mockup-card-label { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+    .mockup-card-badge { font-size: 0.62rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-ready { background: #dcfce7; color: #166534; }
+    .badge-cooking { background: #dbeafe; color: #1e40af; }
+    .mockup-item { font-size: 0.82rem; padding: 4px 0; display: flex; justify-content: space-between; color: var(--text-secondary); }
+    .mockup-item span:last-child { color: var(--accent-amber); font-weight: 600; }
+    .mockup-card-full {
+      grid-column: 1 / -1;
+      background: var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    .panel-card .icon {
-      font-size: 2.5rem;
-      margin-bottom: 12px;
+    .mockup-card-full .left { display: flex; align-items: center; gap: 12px; }
+    .mockup-card-full .table-num { font-size: 1.5rem; font-weight: 800; }
+    .mockup-card-full .table-items { font-size: 0.82rem; color: var(--text-secondary); }
+    .mockup-card-full .btn-demo { padding: 8px 16px; font-size: 0.72rem; border-radius: 8px; border: none; background: var(--accent-green); color: #fff; font-weight: 700; }
+
+    /* ─── Features ────────────────────────────────────────────────── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 48px;
     }
-    .panel-card .name {
-      font-weight: 600;
-      font-size: 1.1rem;
-      margin-bottom: 4px;
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 36px 28px;
+      transition: transform 400ms var(--ease-out), box-shadow 400ms var(--ease-out), border-color 300ms var(--ease-out);
+      box-shadow: var(--shadow-sm);
+      will-change: transform;
     }
-    .panel-card .desc {
-      color: #8899aa;
+    @media (hover: hover) and (pointer: fine) {
+      .feature-card:hover {
+        border-color: var(--border-hover);
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+      }
+    }
+    .feature-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 20px;
+    }
+    .feature-icon.gold { background: #fef3c7; }
+    .feature-icon.blue { background: #dbeafe; }
+    .feature-icon.green { background: #dcfce7; }
+    .feature-icon.purple { background: #ede9fe; }
+    .feature-icon.red { background: #fee2e2; }
+    .feature-icon.brown { background: #fef3c7; }
+    .feature-card h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 10px; }
+    .feature-card p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7; }
+    .feature-card .feature-list { margin-top: 16px; list-style: none; }
+    .feature-card .feature-list li {
       font-size: 0.85rem;
-      line-height: 1.4;
+      color: var(--text-secondary);
+      padding: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .panel-card .badge {
-      display: inline-block;
-      margin-top: 10px;
-      padding: 3px 10px;
-      border-radius: 8px;
-      font-size: 0.75rem;
+    .feature-card .feature-list li::before {
+      content: '✓';
+      color: var(--accent-green);
+      font-weight: 700;
+    }
+
+    /* ─── How It Works ────────────────────────────────────────────── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      margin-top: 48px;
+      position: relative;
+    }
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 40px;
+      left: calc(16.66% + 16px);
+      right: calc(16.66% + 16px);
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-amber), var(--accent-blue), var(--accent-green));
+      opacity: 0.2;
+    }
+    .step {
+      text-align: center;
+      position: relative;
+    }
+    .step-number {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin: 0 auto 24px;
+      position: relative;
+      z-index: 2;
+    }
+    .step:nth-child(1) .step-number { background: #fef3c7; color: #92400e; border: 2px solid #fde68a; }
+    .step:nth-child(2) .step-number { background: #dbeafe; color: #1e40af; border: 2px solid #bfdbfe; }
+    .step:nth-child(3) .step-number { background: #dcfce7; color: #166534; border: 2px solid #bbf7d0; }
+    .step h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+    .step p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7; }
+
+    /* ─── Interfaces ──────────────────────────────────────────────── */
+    .interfaces-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+    }
+    .interface-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: transform 400ms var(--ease-out), box-shadow 400ms var(--ease-out), border-color 300ms var(--ease-out);
+      box-shadow: var(--shadow-sm);
+      will-change: transform;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .interface-card:hover {
+        border-color: var(--border-hover);
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+      }
+    }
+    .interface-preview {
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      position: relative;
+    }
+    .interface-preview.waiter { background: linear-gradient(135deg, #fef3c7, #ffedd5); }
+    .interface-preview.kitchen { background: linear-gradient(135deg, #dbeafe, #e0e7ff); }
+    .interface-preview.manager { background: linear-gradient(135deg, #dcfce7, #d1fae5); }
+    .interface-preview .device-frame {
+      width: 120px;
+      height: 160px;
+      border: 2px solid var(--border-color);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(255,255,255,0.5);
+    }
+    .interface-preview .device-frame.big {
+      width: 160px;
+      height: 120px;
+      border-radius: 12px;
+    }
+    .interface-card-body { padding: 24px 20px; }
+    .interface-card-body h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+    .interface-card-body p { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7; }
+    .interface-devices {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    /* ─── Pricing ─────────────────────────────────────────────────── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+    }
+    .pricing-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      padding: 40px 28px;
+      transition: transform 400ms var(--ease-out), box-shadow 400ms var(--ease-out), border-color 300ms var(--ease-out);
+      position: relative;
+      box-shadow: var(--shadow-sm);
+      will-change: transform;
+    }
+    .pricing-card.featured {
+      border-color: #fde68a;
+      box-shadow: 0 8px 32px rgba(217,119,6,0.1);
+      transform: scale(1.05);
+      position: relative;
+    }
+    .pricing-card.featured::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: calc(var(--radius-xl) + 1px);
+      background: linear-gradient(135deg, #fde68a, transparent, transparent);
+      z-index: -1;
+    }
+    .pricing-card.featured .featured-badge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 4px 14px;
+      border-radius: 100px;
+      background: var(--gradient-primary);
+      color: #fff;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .pricing-card:hover { border-color: var(--border-hover); }
+    }
+    .pricing-name { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+    .pricing-price { font-size: 2.8rem; font-weight: 900; letter-spacing: -0.03em; color: var(--accent-amber); }
+    .pricing-price .period { font-size: 1rem; font-weight: 500; color: var(--text-muted); }
+    .pricing-desc { font-size: 0.88rem; color: var(--text-secondary); margin: 12px 0 24px; line-height: 1.6; }
+    .pricing-features { list-style: none; margin-bottom: 28px; }
+    .pricing-features li {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .pricing-features li:last-child { border-bottom: none; }
+    .pricing-features li::before { content: '✓'; color: var(--accent-amber); font-weight: 700; }
+    .pricing-features li.missing { color: var(--text-muted); }
+    .pricing-features li.missing::before { content: '—'; color: var(--text-muted); }
+    .pricing-card .btn { width: 100%; justify-content: center; }
+
+    /* ─── CTA ─────────────────────────────────────────────────────── */
+    .cta-section {
+      background: linear-gradient(135deg, #fef3c7, #ffedd5);
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .cta-box {
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .cta-box h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); font-weight: 800; margin-bottom: 16px; }
+    .cta-box p { font-size: 1.05rem; color: var(--text-secondary); margin-bottom: 32px; }
+    .cta-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* ─── FAQ ─────────────────────────────────────────────────────── */
+    .faq-list { max-width: 700px; margin: 48px auto 0; }
+    .faq-item {
+      border-bottom: 1px solid var(--border-color);
+      padding: 20px 0;
+    }
+    .faq-item:first-child {
+      border-top: 1px solid var(--border-color);
+    }
+    .faq-question {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .faq-question .arrow {
+      font-size: 1.2rem;
+      transition: transform 200ms var(--ease-out);
+      color: var(--text-muted);
+    }
+    .faq-answer {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-top: 12px;
+      display: none;
+    }
+    .faq-item.open .faq-answer { display: block; }
+    .faq-item.open .arrow { transform: rotate(180deg); }
+
+    /* ─── Footer ──────────────────────────────────────────────────── */
+    .footer {
+      padding: 48px 0;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 40px;
+    }
+    .footer-brand p { font-size: 0.85rem; color: var(--text-muted); margin-top: 12px; max-width: 280px; line-height: 1.7; }
+    .footer-col h4 { font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; color: var(--text-secondary); }
+    .footer-col a {
+      display: block;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 4px 0;
+      transition: var(--transition);
+    }
+    .footer-col a:hover { color: var(--text-primary); }
+    .footer-bottom {
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    /* ─── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+      .hero-mockup { display: none; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .interfaces-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin: 48px auto 0; }
+      .pricing-card.featured { transform: none; }
+      .steps { grid-template-columns: 1fr; }
+      .steps::before { display: none; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .hero-stats { gap: 24px; flex-wrap: wrap; }
+    }
+    /* ─── Cookie Banner ──────────────────────────────────────────── */
+    .cookie-banner {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10000;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border-color);
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.06);
+      padding: 14px 24px;
+      transform: translateY(100%);
+      transition: transform 400ms var(--ease-out);
+    }
+    .cookie-banner.visible {
+      transform: translateY(0);
+    }
+    .cookie-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .cookie-text {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .cookie-icon {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    /* ─── Footer Newsletter ──────────────────────────────────────── */
+    .newsletter-input {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-family: var(--font);
+      font-size: 0.85rem;
+      color: var(--text-primary);
+      min-width: 180px;
+      flex: 1;
+      outline: none;
+    }
+    .newsletter-input:focus {
+      border-color: var(--accent-amber);
+    }
+
+    @media (max-width: 640px) {
+      .features-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      .section { padding: 60px 0; }
+      .cookie-content {
+        flex-direction: column;
+        text-align: center;
+      }
+      .cookie-text {
+        flex-direction: column;
+      }
+    }
+
+    /* ─── Modal Overlay ─────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20000;
+      background: rgba(15,23,42,0.5);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 300ms var(--ease-out);
+      padding: 20px;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal {
+      background: var(--bg-card);
+      border-radius: var(--radius-xl);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.15);
+      max-width: 520px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 32px;
+      transform: translateY(20px) scale(0.97);
+      transition: transform 300ms var(--ease-out);
+      position: relative;
+    }
+    .modal-overlay.open .modal {
+      transform: translateY(0) scale(1);
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: var(--bg-elevated);
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+    .modal-close:hover {
+      background: var(--border-color);
+    }
+    .modal-icon {
+      font-size: 2.2rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+    .modal h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .modal p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .modal .form-group {
+      margin-bottom: 16px;
+    }
+    .modal .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .modal .form-group input,
+    .modal .form-group select,
+    .modal .form-group textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-family: var(--font);
+      font-size: 0.92rem;
+      color: var(--text-primary);
+      background: var(--bg-card);
+      transition: border-color 200ms var(--ease-out);
+      outline: none;
+    }
+    .modal .form-group input:focus,
+    .modal .form-group select:focus,
+    .modal .form-group textarea:focus {
+      border-color: var(--accent-amber);
+      box-shadow: 0 0 0 3px rgba(217,119,6,0.1);
+    }
+    .modal .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .modal .btn {
+      width: 100%;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    .modal .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .modal .form-success {
+      text-align: center;
+      padding: 30px 0;
+    }
+    .modal .form-success .check {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 16px;
+    }
+    .modal .form-success h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .modal .form-success p {
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      margin-bottom: 0;
+    }
+
+    /* ─── Toast Notifications ──────────────────────────────────── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 30000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 14px 20px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.9rem;
+      transform: translateX(120%);
+      opacity: 0;
+      transition: transform 400ms var(--ease-out), opacity 300ms var(--ease-out);
+      max-width: 380px;
+    }
+    .toast.show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    .toast-icon {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .toast-text {
+      flex: 1;
+      color: var(--text-primary);
       font-weight: 500;
     }
-    .badge-waiter { background: #1e3a5f; color: #60a5fa; }
-    .badge-kitchen { background: #3a1a1a; color: #fb923c; }
-    .badge-manager { background: #1a2a1a; color: #4ade80; }
-    .table-input-group {
-      margin-top: 20px;
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-      align-items: center;
-    }
-    .table-input-group input {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 8px;
-      padding: 8px 12px;
-      color: #e0e8f0;
-      width: 80px;
-      text-align: center;
-      font-size: 1rem;
-    }
-    .table-input-group input:focus {
-      outline: none;
-      border-color: #f7971e;
-    }
-    .table-input-group button {
-      background: linear-gradient(135deg, #f7971e, #ffd200);
-      border: none;
-      border-radius: 8px;
-      padding: 8px 16px;
-      color: #0f0f1a;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    .table-input-group button:hover {
-      opacity: 0.9;
-    }
-    .footer-links {
-      margin-top: 2rem;
-      color: #556677;
-      font-size: 0.8rem;
-    }
-    .footer-links a {
-      color: #60a5fa;
-      text-decoration: none;
+    .toast.success { border-left: 3px solid var(--accent-green); }
+    .toast.info { border-left: 3px solid var(--accent-blue); }
+
+    /* ─── Reduced Motion ─────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .reveal { opacity: 1; transform: none; }
+      .hero-entrance { animation: fadeIn 200ms ease forwards; }
+      .hero-tag .dot { animation: none; }
     }
   </style>
 </head>
 <body>
-  <div class="landing">
-    <h1>🍽️ Restaurant OS</h1>
-    <p class="subtitle">Real-Time Orchestration Platform</p>
-    <div class="status-badge">
-      <span class="dot"></span>
-      <span>Server Active · Real-time Sync Online</span>
-    </div>
 
-    <div class="panel-grid">
-      <a href="/waiter.html?table=01" class="panel-card" id="waiterCard">
-        <div class="icon">📋</div>
-        <div class="name">Waiter Pad</div>
-        <div class="desc">Mobile-first ordering interface with table routing, modifiers &amp; live basket</div>
-        <span class="badge badge-waiter">Table Service</span>
+  <!-- ─── Ambient Background ─────────────────────────────────── -->
+  <div class="bg-ambient" aria-hidden="true"></div>
+
+  <!-- ─── Vignette Overlay ──────────────────────────────────── -->
+  <div class="bg-vignette" aria-hidden="true"></div>
+
+  <!-- ─── Morphing Liquid Blobs ───────────────────────────────-->
+  <div class="bg-blobs" aria-hidden="true">
+    <div class="bg-blob bg-blob-1"></div>
+    <div class="bg-blob bg-blob-2"></div>
+    <div class="bg-blob bg-blob-3"></div>
+    <div class="bg-blob bg-blob-4"></div>
+  </div>
+
+  <!-- ─── Navbar ──────────────────────────────────────────────── -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <span class="logo-icon">🍽️</span>
+        Roux
       </a>
-
-      <a href="/kitchen.html" class="panel-card">
-        <div class="icon">🍳</div>
-        <div class="name">Kitchen Display</div>
-        <div class="desc">Wall-mounted KDS with order queue, status pipeline &amp; modifier alerts</div>
-        <span class="badge badge-kitchen">Kitchen</span>
-      </a>
-
-      <a href="/manager.html" class="panel-card">
-        <div class="icon">📊</div>
-        <div class="name">Manager Panel</div>
-        <div class="desc">Catalog mutation, inventory sync &amp; live menu preview</div>
-        <span class="badge badge-manager">Admin</span>
-      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#interfaces">Interfaces</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#faq">FAQ</a>
+        <a href="#cta" class="btn btn-primary nav-cta">Get Early Access</a>
+      </div>
     </div>
+  </nav>
 
-    <div class="table-input-group">
-      <label style="color:#8899aa;font-size:0.9rem;">Table:</label>
-      <input type="number" id="tableInput" value="1" min="1" max="99">
-      <button onclick="openWaiter()">Open Waiter Pad</button>
+  <!-- ─── Hero ────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-text">
+          <div class="hero-tag hero-entrance hero-entrance-delay-1">
+            <span class="dot"></span>
+            Live on 12+ restaurant floors
+          </div>
+          <h1 class="hero-entrance hero-entrance-delay-2">
+            The OS your<br>
+            restaurant floor<br>
+            <span class="highlight">actually deserves</span>
+          </h1>
+          <p class="hero-entrance hero-entrance-delay-3">
+            Real-time ordering, kitchen display, and management — all in one lightweight system.
+            No clunky terminals. No expensive hardware. Just your existing tablets and phones.
+          </p>
+          <div class="hero-actions hero-entrance hero-entrance-delay-3">
+            <a href="#cta" class="btn btn-primary btn-lg">Start Free Trial</a>
+            <a href="#interfaces" class="btn btn-secondary btn-lg">See How It Works</a>
+          </div>
+          <div class="hero-stats hero-entrance hero-entrance-delay-4">
+            <div class="hero-stat">
+              <h3><span class="gold">0.3</span>s</h3>
+              <p>Average order latency</p>
+            </div>
+            <div class="hero-stat">
+              <h3><span class="green">99.9</span>%</h3>
+              <p>Uptime guarantee</p>
+            </div>
+            <div class="hero-stat">
+              <h3><span class="blue">3</span></h3>
+              <p>Devices, 1 system</p>
+            </div>
+          </div>
+        </div>
+        <div class="hero-mockup hero-entrance hero-entrance-delay-5">
+          <div class="mockup-frame">
+            <div class="mockup-header">
+              <div class="mockup-dots">
+                <span class="mockup-dot"></span>
+                <span class="mockup-dot"></span>
+                <span class="mockup-dot"></span>
+              </div>
+              <span class="mockup-title">🍳 Kitchen Display — Table 04</span>
+            </div>
+            <div class="mockup-body">
+              <div class="mockup-card">
+                <div class="mockup-card-header">
+                  <span class="mockup-card-label">Items</span>
+                  <span class="mockup-card-badge badge-pending">Pending</span>
+                </div>
+                <div class="mockup-item"><span>Spring Rolls x2</span><span>₹11.98</span></div>
+                <div class="mockup-item"><span>Garlic Bread x1</span><span>₹4.99</span></div>
+              </div>
+              <div class="mockup-card">
+                <div class="mockup-card-header">
+                  <span class="mockup-card-label">Cooking</span>
+                  <span class="mockup-card-badge badge-cooking">2 items</span>
+                </div>
+                <div class="mockup-item"><span>Chicken Biryani</span><span>₹14.99</span></div>
+                <div class="mockup-item"><span>Butter Chicken</span><span>₹15.99</span></div>
+              </div>
+              <div class="mockup-card-full">
+                <div class="left">
+                  <span class="table-num">T04</span>
+                  <span class="table-items">4 items · ₹47.95</span>
+                </div>
+                <button class="btn-demo">✓ Ready</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <div class="footer-links">
-      <span>Server: ws://localhost:3000</span>
+  <!-- ─── Features ────────────────────────────────────────────── -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="text-center reveal">
+        <div class="section-label mx-auto"><span>✦</span> Everything you need</div>
+        <h2 class="section-title">Built for the pace of a real kitchen</h2>
+        <p class="section-subtitle mx-auto">
+          From the moment a waiter takes an order to the plate hitting the pass — every second counts.
+        </p>
+      </div>
+      <div class="features-grid reveal reveal-delay-1">
+        <div class="feature-card">
+          <div class="feature-icon gold">⚡</div>
+          <h3>Real-Time Sync</h3>
+          <p>Orders appear on the kitchen display instantly. No refresh, no delay. WebSocket-powered sub-100ms propagation.</p>
+          <ul class="feature-list">
+            <li>Live order queue</li>
+            <li>Instant status updates</li>
+            <li>Offline resilience</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon blue">📱</div>
+          <h3>Works on Any Device</h3>
+          <p>Runs in any browser — cheap Android tablets, old iPads, or your phone. No expensive hardware required.</p>
+          <ul class="feature-list">
+            <li>Mobile-first waiter pad</li>
+            <li>Wall-mounted kitchen view</li>
+            <li>Desktop manager panel</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon green">🎯</div>
+          <h3>Per-Item Status Tracking</h3>
+          <p>Every item on every order tracks its own status: pending → cooking → ready. No more shouting across the kitchen.</p>
+          <ul class="feature-list">
+            <li>Individual item pipeline</li>
+            <li>Auto-derived order status</li>
+            <li>Color-coded indicators</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon purple">🛠️</div>
+          <h3>Live Menu Management</h3>
+          <p>Update prices, toggle availability, or add new items — changes sync to every waiter device instantly.</p>
+          <ul class="feature-list">
+            <li>CRUD menu editor</li>
+            <li>Availability toggles</li>
+            <li>Real-time broadcast</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon brown">📋</div>
+          <h3>Smart Modifier System</h3>
+          <p>Custom instructions per item with quick-select buttons. "No onions", "Extra spicy" — the kitchen sees it all.</p>
+          <ul class="feature-list">
+            <li>Per-item modifiers</li>
+            <li>Quick-select presets</li>
+            <li>Highlighted in kitchen</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon red">🔔</div>
+          <h3>Ready Notifications</h3>
+          <p>When the kitchen marks an order ready, the waiter gets a bright green banner. No more cold food at the pass.</p>
+          <ul class="feature-list">
+            <li>Visual + audio alerts</li>
+            <li>Order-ready banner</li>
+            <li>Kitchen new-order flash</li>
+          </ul>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon purple">📱</div>
+          <h3>QR Self-Ordering</h3>
+          <p>Guests scan a QR code at their table to browse the menu and place orders directly from their phone. No app download needed.</p>
+          <ul class="feature-list">
+            <li>Per-table QR codes</li>
+            <li>Live order tracking</li>
+            <li>Works on any phone</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Interfaces ──────────────────────────────────────────── -->
+  <section class="section" id="interfaces" style="background: var(--bg-secondary);">
+    <div class="container">
+      <div class="text-center reveal">
+        <div class="section-label mx-auto"><span>✦</span> Three interfaces, one engine</div>
+        <h2 class="section-title">Every role, perfectly equipped</h2>
+        <p class="section-subtitle mx-auto">
+          Waiter Pad, Kitchen Display, and Manager Panel — each built for the job at hand.
+        </p>
+      </div>
+      <div class="interfaces-grid reveal reveal-delay-1">
+        <div class="interface-card">
+          <div class="interface-preview waiter">
+            <div class="device-frame">
+              <span>📋</span>
+              <span>Waiter Pad</span>
+            </div>
+          </div>
+          <div class="interface-card-body">
+            <h3>Waiter Pad</h3>
+            <p>Mobile-first ordering interface. Browse menus by category, add modifiers, adjust quantities, and send orders with one tap.</p>
+            <div class="interface-devices">📱 Phones · 📟 Tablets</div>
+          </div>
+        </div>
+        <div class="interface-card">
+          <div class="interface-preview kitchen">
+            <div class="device-frame big">
+              <span>🍳</span>
+              <span>Kitchen Display</span>
+            </div>
+          </div>
+          <div class="interface-card-body">
+            <h3>Kitchen Display System</h3>
+            <p>Large-format order queue optimized for wall-mounted screens. Filter by status, update item progress, never lose track.</p>
+            <div class="interface-devices">🖥️ Monitors · 📺 TVs</div>
+          </div>
+        </div>
+        <div class="interface-card">
+          <div class="interface-preview manager">
+            <div class="device-frame big">
+              <span>📊</span>
+              <span>Manager Panel</span>
+            </div>
+          </div>
+          <div class="interface-card-body">
+            <h3>Manager Panel</h3>
+            <p>Full menu control. Add items, update prices, toggle availability, and see everything organized by category.</p>
+            <div class="interface-devices">💻 Desktops · 💼 Laptops</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── How It Works ────────────────────────────────────────── -->
+  <section class="section">
+    <div class="container">
+      <div class="text-center reveal">
+        <div class="section-label mx-auto"><span>✦</span> Set up in minutes</div>
+        <h2 class="section-title">Three steps to a smarter floor</h2>
+        <p class="section-subtitle mx-auto">
+          No installation, no training manual, no IT guy needed.
+        </p>
+      </div>
+      <div class="steps reveal reveal-delay-1">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Create Your Account</h3>
+          <p>Sign up and name your restaurant. That's it — you're in. No credit card required to start.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Set Up Your Menu</h3>
+          <p>Add your items, categories, and prices in the manager panel. Takes about 10 minutes.</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Open on Any Device</h3>
+          <p>Open the Waiter Pad on phones, Kitchen Display on a TV, and Manager Panel on your laptop. All synced instantly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Pricing ─────────────────────────────────────────────── -->
+  <section class="section" id="pricing" style="background: var(--bg-secondary); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+    <div class="container">
+      <div class="text-center reveal">
+        <div class="section-label mx-auto"><span>✦</span> Simple pricing</div>
+        <h2 class="section-title">No hidden fees. No long contracts.</h2>
+        <p class="section-subtitle mx-auto">
+          Start with a free trial. Upgrade when you're ready.
+        </p>
+      </div>
+      <div class="pricing-grid reveal reveal-delay-1">
+        <div class="pricing-card">
+          <div class="pricing-name">Starter</div>
+          <div class="pricing-price">₹29 <span class="period">/month</span></div>
+          <p class="pricing-desc">Perfect for small cafes and pop-ups.</p>
+          <ul class="pricing-features">
+            <li>Up to 2 devices</li>
+            <li>Full menu management</li>
+            <li>Real-time kitchen display</li>
+            <li>Email support</li>
+            <li class="missing">Analytics & reports</li>
+            <li class="missing">Multi-location</li>
+          </ul>
+          <a href="#cta" class="btn btn-secondary">Start Free Trial</a>
+        </div>
+        <div class="pricing-card featured">
+          <span class="featured-badge">Most popular</span>
+          <div class="pricing-name">Pro</div>
+          <div class="pricing-price">₹79 <span class="period">/month</span></div>
+          <p class="pricing-desc">For busy restaurants that need the full stack.</p>
+          <ul class="pricing-features">
+            <li>Up to 10 devices</li>
+            <li>Full menu management</li>
+            <li>Real-time kitchen display</li>
+            <li>Priority support</li>
+            <li>Sales analytics & reports</li>
+            <li class="missing">Multi-location</li>
+          </ul>
+          <a href="#cta" class="btn btn-primary">Start Free Trial</a>
+        </div>
+        <div class="pricing-card">
+          <div class="pricing-name">Enterprise</div>
+          <div class="pricing-price">Custom</div>
+          <p class="pricing-desc">For multi-location restaurants and chains.</p>
+          <ul class="pricing-features">
+            <li>Unlimited devices</li>
+            <li>Full menu management</li>
+            <li>Real-time kitchen display</li>
+            <li>Dedicated support</li>
+            <li>Advanced analytics</li>
+            <li>Multi-location management</li>
+          </ul>
+          <a href="#cta" class="btn btn-secondary">Contact Sales</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── CTA ─────────────────────────────────────────────────── -->
+  <section class="section cta-section" id="cta">
+    <div class="container">
+      <div class="cta-box reveal">
+        <h2>Ready to bring your restaurant online?</h2>
+        <p>
+          Join restaurant owners who've ditched their clunky POS for something that
+          actually works. Free 14-day trial, no credit card required.
+        </p>
+        <div class="cta-actions reveal reveal-delay-1">
+          <a href="#" class="btn btn-primary btn-lg" onclick="openModal('signupModal');return false;">Start Free Trial</a>
+          <a href="#" class="btn btn-secondary btn-lg" onclick="openModal('demoModal');return false;">Book a Demo</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Contact Section ──────────────────────────────────────────── -->
+  <section class="section" id="contact" style="background: var(--bg-secondary);">
+    <div class="container">
+      <div class="text-center reveal">
+        <div class="section-label mx-auto"><span>✦</span> Get in touch</div>
+        <h2 class="section-title">Have questions? We're here</h2>
+        <p class="section-subtitle mx-auto">
+          Whether you need help setting up, have a feature request, or just want to say hello — we'd love to hear from you.
+        </p>
+      </div>
+      <div class="reveal reveal-delay-1" style="max-width:600px;margin:48px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <a href="mailto:support@roux.app" class="feature-card" style="text-decoration:none;padding:24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
+          <div class="feature-icon gold" style="margin-bottom:0;">📧</div>
+          <h3 style="font-size:1rem;">Email Support</h3>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">support@roux.app</p>
+          <p style="font-size:0.82rem;color:var(--text-secondary);margin:0;">We respond within 24 hours</p>
+        </a>
+        <a href="#" class="feature-card" style="text-decoration:none;padding:24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;" onclick="openModal('demoModal');return false;">
+          <div class="feature-icon blue" style="margin-bottom:0;">💬</div>
+          <h3 style="font-size:1rem;">Book a Demo</h3>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">See Roux in action</p>
+          <p style="font-size:0.82rem;color:var(--text-secondary);margin:0;">We'll walk you through everything</p>
+        </a>
+        <a href="mailto:support@roux.app" class="feature-card" style="text-decoration:none;padding:24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
+          <div class="feature-icon green" style="margin-bottom:0;">📚</div>
+          <h3 style="font-size:1rem;">Documentation</h3>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">docs.roux.app</p>
+          <p style="font-size:0.82rem;color:var(--text-secondary);margin:0;">Setup guides & API reference</p>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── FAQ ─────────────────────────────────────────────────── -->
+  <section class="section" id="faq">
+    <div class="container">
+      <div class="text-center reveal">
+        <div class="section-label mx-auto"><span>✦</span> Got questions?</div>
+        <h2 class="section-title">Frequently asked</h2>
+      </div>
+      <div class="faq-list reveal reveal-delay-1">
+        <div class="faq-item open">
+          <div class="faq-question">
+            What hardware do I need?
+            <span class="arrow">▼</span>
+          </div>
+          <div class="faq-answer">
+            Just any device with a web browser. An old Android tablet for the waiter pad,
+            a spare monitor or TV for the kitchen display, and a laptop for management.
+            No special hardware required.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question">
+            Is it hard to set up?
+            <span class="arrow">▼</span>
+          </div>
+          <div class="faq-answer">
+            Not at all. Create an account, add your menu items (takes about 10 minutes),
+            and open the right URL on each device. Everything syncs automatically.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question">
+            What happens if the internet goes down?
+            <span class="arrow">▼</span>
+          </div>
+          <div class="faq-answer">
+            The system is designed for local LAN operation, so it keeps working as long
+            as devices are on the same network. For cloud deployments, we have offline
+            fallback modes in development.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question">
+            Can I migrate from my current POS?
+            <span class="arrow">▼</span>
+          </div>
+          <div class="faq-answer">
+            Yes — we offer free data migration from most major POS systems.
+            Just export your menu and we'll import it for you.
+          </div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question">
+            Do you offer on-site setup?
+            <span class="arrow">▼</span>
+          </div>
+          <div class="faq-answer">
+            For Pro and Enterprise plans, we offer remote setup assistance.
+            For Enterprise, we can do an on-site visit to get everything configured perfectly.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Footer ──────────────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="navbar-brand">
+            <span class="logo-icon">🍽️</span>
+            Roux
+          </a>
+          <p>The real-time restaurant engine that works on the hardware you already own.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="#features">Features</a>
+          <a href="#interfaces">Interfaces</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#faq">FAQ</a>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <a href="mailto:support@roux.app">Contact</a>
+        </div>
+        <div class="footer-col">
+          <h4>Support</h4>
+          <a href="mailto:support@roux.app">Help Center</a>
+          <a href="/privacy.html">Privacy Policy</a>
+          <a href="/terms.html">Terms of Service</a>
+        </div>
+      </div>
+      <div class="footer-middle" style="border-top:1px solid var(--border-color);padding:24px 0;margin-top:32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:0.88rem;color:var(--text-secondary);font-weight:600;">📬 Stay in the loop</span>            <form class="newsletter-form" style="display:flex;gap:8px;" onsubmit="event.preventDefault();showToast('🙌', 'Thanks for subscribing! We\'ll keep you posted.');this.querySelector('input').value='';">
+            <input type="email" placeholder="your@email.com" required class="newsletter-input">
+            <button type="submit" class="btn btn-primary" style="padding:10px 18px;font-size:0.82rem;">Subscribe</button>
+          </form>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <span style="color:var(--text-muted);font-size:1.2rem;">𝕏</span>
+          <span style="color:var(--text-muted);font-size:1.2rem;">in</span>
+        </div>
+      </div>
+      <div class="footer-bottom" style="border-top:none;padding-top:16px;">
+        <span>&copy; 2026 Roux. All rights reserved.</span>
+        <span>Made in India 🇮🇳 · Built with ☕ and 🍕</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ─── Cookie Consent Banner ────────────────────────────────── -->
+  <div class="cookie-banner" id="cookieBanner">
+    <div class="cookie-content">
+      <div class="cookie-text">
+        <span class="cookie-icon">🍪</span>
+        <span>We use essential cookies to make Roux work. No tracking, no ads, no nonsense. <a href="/privacy.html" style="color:var(--accent-amber);text-decoration:underline;">Learn more</a></span>
+      </div>
+      <button class="btn btn-primary cookie-accept" id="cookieAccept" style="padding:10px 24px;font-size:0.85rem;white-space:nowrap;">Got it!</button>
     </div>
   </div>
 
+  <!-- ─── Toast Container ─────────────────────────────────────── -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- ─── Book a Demo Modal ───────────────────────────────────── -->
+  <div class="modal-overlay" id="demoModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('demoModal')">✕</button>
+      <span class="modal-icon">📅</span>
+      <h2>Book a Demo</h2>
+      <p>See Roux in action. We'll show you around and answer any questions.</p>
+      <form id="demoForm" onsubmit="return submitDemoForm(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="demoName">Your Name</label>
+            <input type="text" id="demoName" required placeholder="e.g. Priya Sharma" autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label for="demoEmail">Email</label>
+            <input type="email" id="demoEmail" required placeholder="you@restaurant.com" autocomplete="email">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="demoRestaurant">Restaurant Name</label>
+            <input type="text" id="demoRestaurant" required placeholder="e.g. Spice Garden" autocomplete="organization">
+          </div>
+          <div class="form-group">
+            <label for="demoPhone">Phone</label>
+            <input type="tel" id="demoPhone" placeholder="+91 98765 43210" autocomplete="tel">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="demoDate">Preferred Date</label>
+          <input type="date" id="demoDate" required>
+        </div>
+        <div class="form-group">
+          <label for="demoMessage">Anything specific you'd like to see?</label>
+          <textarea id="demoMessage" placeholder="e.g. I'm interested in the QR ordering feature..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">📅 Confirm Booking</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ─── Sign Up / Start Free Trial Modal ────────────────────── -->
+  <div class="modal-overlay" id="signupModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('signupModal')">✕</button>
+      <span class="modal-icon">🚀</span>
+      <h2>Start Your Free Trial</h2>
+      <p>No credit card required. 14 days of full access, no strings attached.</p>
+      <form id="signupForm" onsubmit="return submitSignupForm(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="signupName">Your Name</label>
+            <input type="text" id="signupName" required placeholder="e.g. Priya Sharma" autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label for="signupEmail">Email</label>
+            <input type="email" id="signupEmail" required placeholder="you@restaurant.com" autocomplete="email">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="signupRestaurant">Restaurant Name</label>            <input type="text" id="signupRestaurant" required placeholder="e.g. Spice Garden" autocomplete="organization">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="signupPhone">Phone</label>
+            <input type="tel" id="signupPhone" placeholder="+91 98765 43210" autocomplete="tel">
+          </div>
+          <div class="form-group">
+            <label for="signupSize">Team Size</label>
+            <select id="signupSize">
+              <option value="1-5">1-5 staff</option>
+              <option value="6-15" selected>6-15 staff</option>
+              <option value="16-30">16-30 staff</option>
+              <option value="30+">30+ staff</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">🚀 Start Free Trial</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ─── Scripts ─────────────────────────────────────────────── -->
   <script>
-    function openWaiter() {
-      const table = document.getElementById('tableInput').value.padStart(2, '0');
-      window.open('/waiter.html?table=' + table, '_blank');
+    // ─── Toast Notification System ────────────────────────────────
+    function showToast(icon, message, type) {
+      type = type || 'success';
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.setAttribute('role', 'status');
+      toast.innerHTML = '<span class="toast-icon">' + icon + '</span><span class="toast-text">' + message + '</span>';
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 400);
+      }, 4000);
     }
-    document.getElementById('tableInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') openWaiter();
+
+    // ─── Modal Functions ───────────────────────────────────────────
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    // Close modal on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target === el) {
+          el.classList.remove('open');
+          document.body.style.overflow = '';
+        }
+      });
     });
-  </script>  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.open').forEach(m => {
+          m.classList.remove('open');
+          document.body.style.overflow = '';
+        });
+      }
+    });
+
+    // ─── Demo Form Submission ──────────────────────────────────────
+    function submitDemoForm(e) {
+      e.preventDefault();
+      const form = e.target;
+      const payload = {
+        name: document.getElementById('demoName').value,
+        email: document.getElementById('demoEmail').value,
+        restaurant: document.getElementById('demoRestaurant').value,
+        phone: document.getElementById('demoPhone').value,
+        date: document.getElementById('demoDate').value,
+        message: document.getElementById('demoMessage').value,
+      };
+
+      closeModal('demoModal');
+
+      fetch('/api/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error('Server error');
+          return r.json();
+        })
+        .then(() => {
+          const name = payload.name.split(' ')[0];
+          const contact = payload.phone ? ' or call you at ' + payload.phone : '';
+          showToast('📅', 'Thanks ' + name + '! We\'ll email you at ' + payload.email + contact + ' to confirm your demo.', 'info');
+        })
+        .catch(() => {
+          showToast('⚠️', 'Something went wrong. Please email us at support@roux.app.', 'info');
+        });
+
+      form.reset();
+      return false;
     }
+
+    // ─── Signup Form Submission ────────────────────────────────────
+    function submitSignupForm(e) {
+      e.preventDefault();
+      const form = e.target;
+      const payload = {
+        name: document.getElementById('signupName').value,
+        email: document.getElementById('signupEmail').value,
+        restaurant: document.getElementById('signupRestaurant').value,
+        phone: document.getElementById('signupPhone').value,
+        teamSize: document.getElementById('signupSize').value,
+      };
+
+      closeModal('signupModal');
+
+      fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then((r) => {
+          if (!r.ok) throw new Error('Server error');
+          return r.json();
+        })
+        .then(() => {
+          const name = payload.name.split(' ')[0];
+          const contact = payload.phone ? ' or call you at ' + payload.phone : '';
+          showToast('🚀', 'Welcome ' + name + '! Check your inbox at ' + payload.email + contact + ' for next steps.', 'success');
+        })
+        .catch(() => {
+          showToast('⚠️', 'Something went wrong. Please email us at support@roux.app.', 'info');
+        });
+
+      form.reset();
+      return false;
+    }
+
+    // ─── Mouse Parallax ───────────────────────────────────────────
+    (function() {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReducedMotion) return;
+
+      let mouseX = 0.5, mouseY = 0.5;
+      let targetMouseX = 0.5, targetMouseY = 0.5;
+
+      document.addEventListener('mousemove', (e) => {
+        targetMouseX = e.clientX / window.innerWidth;
+        targetMouseY = e.clientY / window.innerHeight;
+      }, { passive: true });
+
+      document.addEventListener('touchmove', (e) => {
+        const touch = e.touches[0];
+        targetMouseX = touch.clientX / window.innerWidth;
+        targetMouseY = touch.clientY / window.innerHeight;
+      }, { passive: true });
+
+      const blobLayer = document.querySelector('.bg-blobs');
+
+      function updateParallax() {
+        mouseX += (targetMouseX - mouseX) * 0.05;
+        mouseY += (targetMouseY - mouseY) * 0.05;
+
+        const offsetX = (mouseX - 0.5) * 2;
+        const offsetY = (mouseY - 0.5) * 2;
+
+        // Subtle parallax: shift the entire blob layer following cursor
+        const x = offsetX * 8;
+        const y = offsetY * 6;
+        blobLayer.style.transform = `translate(${x}px, ${y}px)`;
+      }
+
+      function animate() {
+        updateParallax();
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    })();
+
+    // ─── Scroll Reveal (IntersectionObserver) ───────────────────────
+    (function() {
+      const revealEls = document.querySelectorAll('.reveal');
+      if (revealEls.length > 0 && 'IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+        );
+        revealEls.forEach((el) => observer.observe(el));
+      } else {
+        // Fallback: show everything immediately
+        revealEls.forEach((el) => el.classList.add('visible'));
+      }
+    })();
+
+    // ─── Navbar scroll effect ───────────────────────────────────────
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    // ─── FAQ accordion ──────────────────────────────────────────────
+    document.querySelectorAll('.faq-question').forEach((q) => {
+      q.addEventListener('click', () => {
+        q.parentElement.classList.toggle('open');
+      });
+    });
+
+    // ─── Cookie consent banner ──────────────────────────────────────
+    (function() {
+      const banner = document.getElementById('cookieBanner');
+      const acceptBtn = document.getElementById('cookieAccept');
+
+      if (!localStorage.getItem('roux_cookie_consent')) {
+        setTimeout(() => banner.classList.add('visible'), 500);
+      }
+
+      acceptBtn.addEventListener('click', () => {
+        localStorage.setItem('roux_cookie_consent', 'accepted');
+        banner.classList.remove('visible');
+        setTimeout(() => banner.remove(), 400);
+      });
+    })();
   </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 /**
- * Shared Socket.io client for Restaurant OS.
+ * Shared Socket.io client for Roux.
  * Provides a singleton socket connection and helper functions.
  */
 const RestaurantSocket = (() => {

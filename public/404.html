@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 — Page Not Found | Roux</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --border-color: #e2e8f0;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent-amber: #d97706;
+      --gradient-primary: linear-gradient(135deg, #d97706, #b45309);
+      --radius-md: 12px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --transition: all 0.2s ease;
+    }
+    body {
+      font-family: var(--font);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      padding: 24px;
+    }
+    /* Ambient background */
+    .bg-ambient {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;
+      pointer-events: none;
+      background: linear-gradient(180deg, #fefce8 0%, #f8fafc 400px, #ffffff 100%);
+    }
+    .bg-orb {
+      position: absolute;
+      border-radius: 50%;
+      will-change: transform;
+      pointer-events: none;
+    }
+    .bg-orb-1 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle at 30% 40%, rgba(217,119,6,0.12) 0%, transparent 70%);
+      filter: blur(80px);
+      top: -10%; left: -5%;
+      animation: orbFloat 20s ease-in-out infinite;
+    }
+    .bg-orb-2 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle at 60% 30%, rgba(251,191,36,0.08) 0%, transparent 70%);
+      filter: blur(70px);
+      bottom: 10%; right: -5%;
+      animation: orbFloat 25s ease-in-out infinite reverse;
+    }
+    @keyframes orbFloat {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(40px, -40px) scale(1.1); }
+    }
+    .container {
+      text-align: center;
+      max-width: 500px;
+    }
+    .error-code {
+      font-size: 6rem;
+      font-weight: 900;
+      line-height: 1;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .error-emoji {
+      font-size: 4rem;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    p {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font);
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 14px 32px;
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+      background: var(--gradient-primary);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(217,119,6,0.2);
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(217,119,6,0.3);
+    }
+    .home-link {
+      display: block;
+      margin-top: 16px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+    .home-link:hover {
+      color: var(--accent-amber);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .bg-orb { animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Ambient Background -->
+  <div class="bg-ambient" aria-hidden="true">
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+  </div>
+  <div class="container">
+    <div class="error-emoji">🍳</div>
+    <div class="error-code">404</div>
+    <h1>This page got burnt</h1>
+    <p>Looks like this dish isn't on our menu. The page you're looking for doesn't exist or has been moved to another table.</p>
+    <a href="/" class="btn">← Back to Home</a>
+    <a href="/hub.html" class="home-link">Or go to the Control Center →</a>
+  </div>
+</body>
+</html>

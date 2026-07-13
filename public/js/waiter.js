@@ -7,9 +7,13 @@
     waiterId: 1,
     waiterName: 'Waiter',
     currentCategory: 'starters',
+    editCategory: 'starters',
     menu: null,
     basket: [],
+    orders: [],
     selectedItem: null,  // item being modified
+    editingOrder: null,   // order being edited
+    editingItems: [],      // mutable items array during edit
     socketConnected: false,
   };
 
@@ -18,8 +22,12 @@
   const $$ = (sel) => document.querySelectorAll(sel);
 
   const dom = {
+    // Header
     tableBadge: $('#tableBadge'),
     connDot: $('#connDot'),
+    ordersToggle: $('#ordersToggle'),
+
+    // Menu / Basket
     categoryTabs: $('#categoryTabs'),
     menuGrid: $('#menuGrid'),
     menuLoading: $('#menuLoading'),
@@ -27,6 +35,8 @@
     basketCount: $('#basketCount'),
     basketTotal: $('#basketTotal'),
     sendBtn: $('#sendBtn'),
+
+    // Modifier Modal
     modifierModal: $('#modifierModal'),
     modalItemName: $('#modalItemName'),
     modalItemPrice: $('#modalItemPrice'),
@@ -36,13 +46,45 @@
     qtyInc: $('#qtyInc'),
     modalSkip: $('#modalSkip'),
     modalAdd: $('#modalAdd'),
+
+    // Basket Modal
     basketModal: $('#basketModal'),
     basketItems: $('#basketItems'),
     basketModalTotal: $('#basketModalTotal'),
     basketClose: $('#basketClose'),
     basketSend: $('#basketSend'),
+
+    // Orders Panel
+    ordersModal: $('#ordersModal'),
+    ordersList: $('#ordersList'),
+    ordersTableNum: $('#ordersTableNum'),
+    ordersClose: $('#ordersClose'),
+    ordersNewOrder: $('#ordersNewOrder'),
+
+    // Edit Order Modal
+    editOrderModal: $('#editOrderModal'),
+    editOrderId: $('#editOrderId'),
+    editOrderTable: $('#editOrderTable'),
+    editOrderStatus: $('#editOrderStatus'),
+    editOrderItems: $('#editOrderItems'),
+    editCategoryTabs: $('#editCategoryTabs'),
+    editMenuGrid: $('#editMenuGrid'),
+    editAddSection: $('#editAddSection'),
+    editAddItemName: $('#editAddItemName'),
+    editAddModifier: $('#editAddModifier'),
+    editAddQtyDec: $('#editAddQtyDec'),
+    editAddQtyInc: $('#editAddQtyInc'),
+    editAddQtyValue: $('#editAddQtyValue'),
+    editAddConfirm: $('#editAddConfirm'),
+    editOrderCancel: $('#editOrderCancel'),
+    editOrderSave: $('#editOrderSave'),
+
+    // Misc
     toastContainer: $('#toastContainer'),
   };
+
+  // ─── New DOM refs for sidebar ───
+  const sidebarDom = {};
 
   // ─── Init ────────────────────────────────────────────────────────────
   function init() {
@@ -51,7 +93,13 @@
     state.tableNumber = (params.get('table') || '01').padStart(2, '0');
     state.waiterName = params.get('waiter') || 'Waiter';
     dom.tableBadge.textContent = `Table ${state.tableNumber}`;
+    dom.ordersTableNum.textContent = state.tableNumber;
     document.title = `Waiter Pad — Table ${state.tableNumber}`;
+
+    // Cache sidebar DOM refs
+    sidebarDom.container = $('#waiterSidebar');
+    sidebarDom.items = $('#sidebarItems');
+    sidebarDom.toggle = $('#sidebarToggle');
 
     // Setup Socket.io
     setupSocket();
@@ -59,8 +107,12 @@
     // Fetch menu
     fetchMenu();
 
+    // Fetch orders for this table
+    fetchOrders();
+
     // Event listeners
     setupEventListeners();
+    setupSidebarListeners();
   }
 
   // ─── Socket ──────────────────────────────────────────────────────────
@@ -71,6 +123,8 @@
     client.on('_connected', () => {
       state.socketConnected = true;
       dom.connDot.className = 'connection-dot connected';
+      // Refresh orders on reconnect to avoid stale data
+      refreshOrders();
     });
 
     client.on('_disconnected', () => {
@@ -82,21 +136,52 @@
     client.on('menu_updated', (menu) => {
       state.menu = menu;
       renderMenu(state.currentCategory);
+      // Also refresh the edit menu if the edit modal is open
+      if (dom.editOrderModal.classList.contains('active')) {
+        renderEditMenu(state.editCategory);
+      }
     });
 
     // Listen for ready orders
     client.on('waiter_order_ready', (order) => {
       if (order.tableNumber === state.tableNumber) {
         showReadyBanner(order);
+        refreshOrders();
       }
     });
 
-    // Listen for order status updates
-    client.on('order_status_updated', (order) => {
+    // Order updated (items changed via edit or item status change)
+    client.on('order_updated', (order) => {
       if (order.tableNumber === state.tableNumber) {
-        if (order.status === 'ready') {
-          showReadyBanner(order);
+        updateOrderInList(order);
+      }
+    });
+
+    // Individual item status updated (kitchen started cooking an item)
+    client.on('item_status_updated', (data) => {
+      if (data.tableNumber === state.tableNumber) {
+        const order = state.orders.find((o) => o.id === data.orderId);
+        if (order) {
+          const item = order.items[data.itemIndex];
+          if (item) {
+            item.status = data.item.status;
+          }
         }
+        renderSidebar();
+        if (dom.ordersModal.classList.contains('active')) {
+          renderOrdersList();
+        }
+      }
+    });
+
+    // Order deleted
+    client.on('order_deleted', (deletedOrder) => {
+      if (deletedOrder.tableNumber === state.tableNumber) {
+        state.orders = state.orders.filter((o) => o.id !== deletedOrder.id);
+        if (dom.ordersModal.classList.contains('active')) {
+          renderOrdersList();
+        }
+        renderSidebar();
       }
     });
   }
@@ -113,6 +198,40 @@
       dom.menuLoading.textContent = '⚠️ Failed to load menu. Retrying...';
       setTimeout(fetchMenu, 3000);
     }
+  }
+
+  // ─── Fetch Orders ────────────────────────────────────────────────────
+  async function fetchOrders() {
+    try {
+      const res = await fetch(`/api/orders?table=${state.tableNumber}`);
+      state.orders = await res.json();
+    } catch (err) {
+      console.error('Failed to fetch orders:', err);
+    }
+  }
+
+  function refreshOrders() {
+    fetchOrders().then(() => {
+      if (dom.ordersModal.classList.contains('active')) {
+        renderOrdersList();
+      }
+      renderSidebar();
+    }).catch((err) => {
+      console.error('Failed to refresh orders:', err);
+    });
+  }
+
+  function updateOrderInList(updatedOrder) {
+    const idx = state.orders.findIndex((o) => o.id === updatedOrder.id);
+    if (idx !== -1) {
+      state.orders[idx] = updatedOrder;
+    } else {
+      state.orders.unshift(updatedOrder);
+    }
+    if (dom.ordersModal.classList.contains('active')) {
+      renderOrdersList();
+    }
+    renderSidebar();
   }
 
   // ─── Render Menu ─────────────────────────────────────────────────────
@@ -205,6 +324,8 @@
       state.basket = [];
       updateBasketUI();
       dom.basketModal.classList.remove('active');
+      // Refresh orders to include the new one
+      refreshOrders();
     } catch (err) {
       console.error('Send order error:', err);
       showToast('❌ Failed to send order. Try again.', 'error');
@@ -212,6 +333,414 @@
       dom.basketSend.disabled = false;
       dom.basketSend.textContent = 'Send to Kitchen →';
     }
+  }
+
+  // ─── Orders Panel ────────────────────────────────────────────────────
+  function openOrdersPanel() {
+    dom.ordersTableNum.textContent = state.tableNumber;
+    renderOrdersList();
+    dom.ordersModal.classList.add('active');
+  }
+
+  function closeOrdersPanel() {
+    dom.ordersModal.classList.remove('active');
+  }
+
+  function renderOrdersList() {
+    if (state.orders.length === 0) {
+      dom.ordersList.innerHTML = `
+        <div class="orders-empty">
+          <div class="empty-icon">📭</div>
+          <div class="empty-title">No orders yet</div>
+          <div class="empty-desc">Orders sent to the kitchen will appear here</div>
+        </div>
+      `;
+      return;
+    }
+
+    dom.ordersList.innerHTML = state.orders
+      .map((order) => renderOrderCard(order))
+      .join('');
+
+    // Attach actions
+    state.orders.forEach((order) => {
+      const card = dom.ordersList.querySelector(`.order-card[data-id="${order.id}"]`);
+      if (!card) return;
+
+      const editBtn = card.querySelector('.order-edit-btn');
+      if (editBtn) editBtn.addEventListener('click', () => openEditOrder(order));
+
+      const cancelBtn = card.querySelector('.order-cancel-btn');
+      if (cancelBtn) cancelBtn.addEventListener('click', () => cancelOrder(order.id));
+
+      const deliveredBtn = card.querySelector('.order-delivered-btn');
+      if (deliveredBtn) deliveredBtn.addEventListener('click', () => markDelivered(order.id));
+    });
+  }
+
+  function renderOrderCard(order) {
+    const timeAgo = getTimeAgo(order.createdAt);
+    const statusClass = `status-${order.status}`;
+    const statusLabel = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+
+    const itemsHtml = order.items
+      .map(
+        (item) => `
+        <div class="order-item-line">
+          <span class="order-item-qty">${item.quantity}×</span>
+          <span class="order-item-name">${item.name}</span>
+          ${item.modifiers ? `<span class="order-item-mod">📝 ${item.modifiers}</span>` : ''}
+          <span class="order-item-ind-status badge-status status-${item.status || 'pending'}">
+            ${getStatusLabel(item.status || 'pending')}
+          </span>
+        </div>
+      `
+      )
+      .join('');
+
+    const hasPendingItems = order.items.some((i) => i.status === 'pending');
+
+    let actionsHtml = '';
+    if (hasPendingItems) {
+      actionsHtml = `
+        <button class="btn btn-sm btn-secondary order-edit-btn">✏️ Edit</button>
+        <button class="btn btn-sm btn-danger order-cancel-btn">✕ Cancel Order</button>
+      `;
+    } else if (order.status === 'cooking') {
+      actionsHtml = `
+        <span class="order-status-text">👨‍🍳 All Cooking...</span>
+      `;
+    } else if (order.status === 'ready') {
+      actionsHtml = `
+        <button class="btn btn-sm btn-primary order-delivered-btn">✅ Serve & Mark Delivered</button>
+      `;
+    } else if (order.status === 'delivered') {
+      actionsHtml = `
+        <span class="order-status-text" style="color:var(--text-muted);">✅ Delivered</span>
+      `;
+    }
+
+    return `
+      <div class="order-card ${statusClass}" data-id="${order.id}">
+        <div class="order-card-header">
+          <div class="order-card-title">
+            <span class="order-badge">#${order.id}</span>
+            <span class="badge-status ${statusClass}">${statusLabel}</span>
+          </div>
+          <span class="order-time">${timeAgo}</span>
+        </div>
+        <div class="order-card-body">
+          ${itemsHtml}
+        </div>
+        <div class="order-card-actions">
+          ${actionsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  // ─── Cancel Single Item ────────────────────────────────────────────────
+  async function cancelItem(orderId, itemIndex, itemName) {
+    if (!confirm(`Cancel "${itemName}" from order #${orderId}?`)) return;
+
+    try {
+      const res = await fetch(`/api/orders/${orderId}/items/${itemIndex}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to cancel item');
+      }
+      const data = await res.json();
+      if (data.deleted) {
+        showToast(`🗑️ Order #${orderId} deleted (last item removed)`, 'info');
+      } else {
+        showToast(`🗑️ Removed "${itemName}" from order`, 'info');
+      }
+      refreshOrders();
+    } catch (err) {
+      console.error('Cancel item error:', err);
+      showToast(`❌ ${err.message}`, 'error');
+    }
+  }
+
+  // ─── Cancel Entire Order ────────────────────────────────────────────────
+  async function cancelOrder(orderId) {
+    if (!confirm(`Cancel order #${orderId}? This cannot be undone.`)) return;
+
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to cancel order');
+      showToast(`🗑️ Order #${orderId} cancelled`, 'info');
+      refreshOrders();
+    } catch (err) {
+      console.error('Cancel order error:', err);
+      showToast('❌ Failed to cancel order', 'error');
+    }
+  }
+
+  // ─── Mark Delivered ──────────────────────────────────────────────────
+  async function markDelivered(orderId) {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'delivered' }),
+      });
+      if (!res.ok) throw new Error('Failed to update status');
+      showToast(`✅ Order #${orderId} marked as delivered`, 'success');
+      refreshOrders();
+    } catch (err) {
+      console.error('Mark delivered error:', err);
+      showToast('❌ Failed to update order', 'error');
+    }
+  }
+
+  // ─── Edit Order ──────────────────────────────────────────────────────
+  function openEditOrder(order) {
+    state.editingOrder = order;
+    // Deep copy items for editing
+    state.editingItems = order.items.map((item) => ({ ...item }));
+
+    dom.editOrderId.textContent = order.id;
+    dom.editOrderTable.textContent = order.tableNumber;
+    dom.editOrderStatus.textContent = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+    dom.editOrderStatus.className = `badge-status status-${order.status}`;
+
+    renderEditOrderItems();
+    renderEditMenu(state.editCategory);
+    dom.editAddSection.style.display = 'none';
+
+    dom.editOrderModal.classList.add('active');
+  }
+
+  function closeEditOrder() {
+    dom.editOrderModal.classList.remove('active');
+    state.editingOrder = null;
+    state.editingItems = [];
+  }
+
+  function renderEditOrderItems() {
+    if (state.editingItems.length === 0) {
+      dom.editOrderItems.innerHTML = `
+        <div class="edit-empty-items">
+          <span>No items in this order yet — add some from the menu below.</span>
+        </div>
+      `;
+      return;
+    }
+
+    dom.editOrderItems.innerHTML = state.editingItems
+      .map(
+        (item, idx) => {
+          const itemStatus = item.status || 'pending';
+          const isLocked = itemStatus !== 'pending';
+          return `
+            <div class="edit-item-row ${isLocked ? 'edit-item-locked' : ''}" data-index="${idx}">
+              <div class="edit-item-info">
+                <span class="edit-item-name">${item.name}</span>
+                <span class="edit-item-qty">×${item.quantity}</span>
+                ${item.modifiers ? `<span class="edit-item-mod">📝 ${item.modifiers}</span>` : ''}
+                ${isLocked ? `<span class="edit-item-badge badge-status status-${itemStatus}">${itemStatus}</span>` : ''}
+              </div>
+              ${isLocked
+                ? `<span class="edit-item-locked-icon" title="Already ${itemStatus} — cannot remove">🔒</span>`
+                : `<button class="edit-item-remove" data-index="${idx}" title="Remove item">✕</button>`
+              }
+            </div>
+          `;
+        }
+      )
+      .join('');
+
+    // Remove buttons (only for pending items)
+    dom.editOrderItems.querySelectorAll('.edit-item-remove').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.index);
+        state.editingItems.splice(idx, 1);
+        renderEditOrderItems();
+      });
+    });
+  }
+
+  function renderEditMenu(category) {
+    state.editCategory = category;
+    if (!state.menu || !state.menu.categories[category]) return;
+
+    const items = state.menu.categories[category];
+    dom.editMenuGrid.innerHTML = items
+      .map(
+        (item) => `
+        <div class="edit-menu-item ${item.available ? '' : 'unavailable'}" data-id="${item.id}" data-category="${category}">
+          <span class="edit-menu-item-name">${item.name}</span>
+          <span class="edit-menu-item-price">₹${item.price.toFixed(2)}</span>
+        </div>
+      `
+      )
+      .join('');
+
+    // Update category tabs
+    dom.editCategoryTabs.querySelectorAll('.edit-cat-tab').forEach((tab) => {
+      tab.classList.toggle('active', tab.dataset.category === category);
+    });
+  }
+
+  function showEditAddSection(item) {
+    dom.editAddItemName.textContent = item.name;
+    dom.editAddModifier.value = '';
+    dom.editAddQtyValue.textContent = '1';
+    // Store selected item for adding
+    dom.editAddConfirm.dataset.itemId = item.id;
+    dom.editAddConfirm.dataset.category = item.category || state.editCategory;
+    dom.editAddSection.style.display = 'block';
+    dom.editAddSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function confirmEditAddItem() {
+    const itemId = parseInt(dom.editAddConfirm.dataset.itemId);
+    const category = dom.editAddConfirm.dataset.category;
+    const item = state.menu.categories[category]?.find((i) => i.id === itemId);
+    if (!item) return;
+
+    const quantity = parseInt(dom.editAddQtyValue.textContent);
+    const modifiers = dom.editAddModifier.value.trim();
+
+    // Check if same item with same modifiers exists
+    const existing = state.editingItems.findIndex(
+      (i) => i.name === item.name && i.modifiers === modifiers
+    );
+    if (existing !== -1) {
+      state.editingItems[existing].quantity += quantity;
+    } else {
+      state.editingItems.push({
+        name: item.name,
+        quantity,
+        modifiers: modifiers || '',
+      });
+    }
+
+    renderEditOrderItems();
+    dom.editAddSection.style.display = 'none';
+    showToast(`Added ${quantity}x ${item.name}`, 'success');
+  }
+
+  async function saveEditOrder() {
+    if (!state.editingOrder) return;
+
+    dom.editOrderSave.disabled = true;
+    dom.editOrderSave.textContent = '⏳ Saving...';
+
+    try {
+      const res = await fetch(`/api/orders/${state.editingOrder.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: state.editingItems }),
+      });
+
+      if (!res.ok) throw new Error('Failed to update order');
+
+      showToast(`✅ Order #${state.editingOrder.id} updated`, 'success');
+      closeEditOrder();
+      refreshOrders();
+    } catch (err) {
+      console.error('Edit order error:', err);
+      showToast('❌ Failed to save changes', 'error');
+    } finally {
+      dom.editOrderSave.disabled = false;
+      dom.editOrderSave.textContent = '💾 Save Changes';
+    }
+  }
+
+  // ─── Sidebar: Live Item Tracker ─────────────────────────────────────
+  function renderSidebar() {
+    // Collect all non-delivered orders for this table
+    const activeOrders = state.orders.filter((o) => o.status !== 'delivered');
+
+    if (activeOrders.length === 0) {
+      sidebarDom.items.innerHTML = `
+        <div class="sidebar-empty">
+          <span>No active items — place an order to see tracking here</span>
+        </div>
+      `;
+      return;
+    }
+
+    sidebarDom.items.innerHTML = activeOrders
+      .map((order) => {
+        const hasActiveItems = order.items.some((i) => (i.status || 'pending') !== 'ready');
+        if (!hasActiveItems) return '';
+
+        const itemsHtml = order.items
+          .map((item, idx) => {
+            const itemStatus = item.status || 'pending';
+            const isLocked = itemStatus !== 'pending';
+            return `
+              <div class="sidebar-item item-status-${itemStatus}">
+                <div class="sidebar-item-left">
+                  <div class="sidebar-item-top">
+                    <span class="sidebar-item-name">${item.quantity}× ${item.name}</span>
+                    <span class="sidebar-item-status status-${itemStatus}">
+                      ${getStatusLabel(itemStatus)}
+                    </span>
+                  </div>
+                  ${item.modifiers ? `<span class="sidebar-item-mod">📝 ${item.modifiers}</span>` : ''}
+                </div>
+                <div class="sidebar-item-right">
+                  ${!isLocked
+                    ? `<button class="sidebar-cancel-btn" data-order-id="${order.id}" data-item-index="${idx}" data-item-name="${item.name}" title="Cancel item">✕</button>`
+                    : `<span class="sidebar-locked" title="Cooking started — cannot cancel">🔒</span>`
+                  }
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+
+        if (!itemsHtml) return '';
+
+        return `
+          <div class="sidebar-order-group">
+            <div class="sidebar-order-header">
+              <span class="sidebar-order-label">Order #${order.id}</span>
+              <span class="sidebar-order-status badge-status status-${order.status}">
+                ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+              </span>
+            </div>
+            ${itemsHtml}
+          </div>
+        `;
+      })
+      .filter(Boolean)
+      .join('');
+
+    // Attach cancel item listeners
+    sidebarDom.items.querySelectorAll('.sidebar-cancel-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const orderId = parseInt(btn.dataset.orderId);
+        const itemIndex = parseInt(btn.dataset.itemIndex);
+        const itemName = btn.dataset.itemName;
+        cancelItem(orderId, itemIndex, itemName);
+      });
+    });
+  }
+
+  function getStatusLabel(status) {
+    switch (status) {
+      case 'pending': return '⏳ Pending';
+      case 'cooking': return '👨‍🍳 Cooking';
+      case 'ready': return '✅ Ready';
+      case 'delivered': return '📦 Delivered';
+      default: return status;
+    }
+  }
+
+  // ─── Sidebar Toggle ───────────────────────────────────────────────────
+  function setupSidebarListeners() {
+    sidebarDom.toggle.addEventListener('click', () => {
+      const sidebar = sidebarDom.container;
+      sidebar.classList.toggle('collapsed');
+      sidebarDom.toggle.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
+    });
   }
 
   // ─── Ready Banner ────────────────────────────────────────────────────
@@ -273,8 +802,72 @@
     state.selectedItem = null;
   }
 
+  // ─── Editable Table Badge ────────────────────────────────────────────
+  function setupEditableTable() {
+    dom.tableBadge.addEventListener('click', () => {
+      // Don't open edit if already editing
+      if (dom.tableBadge.querySelector('input')) return;
+
+      const currentTable = state.tableNumber;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'table-badge-input';
+      input.value = parseInt(currentTable);
+      input.min = 1;
+      input.max = 99;
+      input.autofocus = true;
+
+      // Replace content with input
+      dom.tableBadge.classList.add('editing');
+      dom.tableBadge.textContent = '';
+      dom.tableBadge.appendChild(input);
+      input.focus();
+      input.select();
+
+      function commitChange() {
+        const val = input.value.trim();
+        const num = parseInt(val);
+        if (!isNaN(num) && num >= 1 && num <= 99) {
+          const newTable = String(num).padStart(2, '0');
+          if (newTable !== state.tableNumber) {
+            state.tableNumber = newTable;
+            dom.tableBadge.textContent = `Table ${newTable}`;
+            dom.ordersTableNum.textContent = newTable;
+            document.title = `Waiter Pad — Table ${newTable}`;
+            // Re-fetch orders for the new table
+            refreshOrders();
+            showToast(`📋 Switched to Table ${newTable}`, 'info');
+          } else {
+            dom.tableBadge.textContent = `Table ${currentTable}`;
+          }
+        } else {
+          dom.tableBadge.textContent = `Table ${currentTable}`;
+        }
+        dom.tableBadge.classList.remove('editing');
+      }
+
+      function cancelEdit() {
+        dom.tableBadge.textContent = `Table ${state.tableNumber}`;
+        dom.tableBadge.classList.remove('editing');
+      }
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          input.blur();
+        } else if (e.key === 'Escape') {
+          cancelEdit();
+        }
+      });
+
+      input.addEventListener('blur', commitChange);
+    });
+  }
+
   // ─── Event Listeners ─────────────────────────────────────────────────
   function setupEventListeners() {
+    // Editable table badge
+    setupEditableTable();
+
     // Category tabs
     dom.categoryTabs.addEventListener('click', (e) => {
       const tab = e.target.closest('.tab');
@@ -296,7 +889,7 @@
       }
     });
 
-    // Quick modifier buttons
+    // Quick modifier buttons (main modal)
     dom.modifierModal.addEventListener('click', (e) => {
       const btn = e.target.closest('.quick-mod');
       if (btn) {
@@ -310,7 +903,7 @@
       }
     });
 
-    // Quantity controls
+    // Quantity controls (main modal)
     dom.qtyDec.addEventListener('click', () => {
       let val = parseInt(dom.qtyValue.textContent);
       if (val > 1) dom.qtyValue.textContent = val - 1;
@@ -330,7 +923,7 @@
       showToast(`Added ${quantity}x ${state.selectedItem.name}`, 'success');
     });
 
-    // Modal Skip button (add without modifiers)
+    // Modal Skip button
     dom.modalSkip.addEventListener('click', () => {
       if (!state.selectedItem) return;
       const quantity = parseInt(dom.qtyValue.textContent);
@@ -356,11 +949,84 @@
       if (e.target === dom.basketModal) dom.basketModal.classList.remove('active');
     });
 
+    // ─── Orders Panel Events ───
+    dom.ordersToggle.addEventListener('click', openOrdersPanel);
+
+    dom.ordersClose.addEventListener('click', closeOrdersPanel);
+    dom.ordersNewOrder.addEventListener('click', closeOrdersPanel);
+    dom.ordersModal.addEventListener('click', (e) => {
+      if (e.target === dom.ordersModal) closeOrdersPanel();
+    });
+
+    // ─── Edit Order Events ───
+    // Edit category tabs
+    dom.editCategoryTabs.addEventListener('click', (e) => {
+      const tab = e.target.closest('.edit-cat-tab');
+      if (tab) {
+        renderEditMenu(tab.dataset.category);
+      }
+    });
+
+    // Edit menu grid item clicks
+    dom.editMenuGrid.addEventListener('click', (e) => {
+      const itemEl = e.target.closest('.edit-menu-item');
+      if (!itemEl || itemEl.classList.contains('unavailable')) return;
+
+      const id = parseInt(itemEl.dataset.id);
+      const category = itemEl.dataset.category || state.editCategory;
+      const item = state.menu.categories[category].find((i) => i.id === id);
+      if (item) {
+        showEditAddSection({ ...item, category });
+      }
+    });
+
+    // Quick modifier buttons (edit modal)
+    dom.editOrderModal.addEventListener('click', (e) => {
+      const btn = e.target.closest('.quick-mod');
+      if (btn && dom.editAddSection.style.display !== 'none') {
+        btn.classList.toggle('active');
+        const mods = Array.from(
+          dom.editOrderModal.querySelectorAll('.quick-mod.active')
+        )
+          .map((b) => b.dataset.mod)
+          .join(', ');
+        dom.editAddModifier.value = mods;
+      }
+    });
+
+    // Quantity controls (edit modal)
+    dom.editAddQtyDec.addEventListener('click', () => {
+      let val = parseInt(dom.editAddQtyValue.textContent);
+      if (val > 1) dom.editAddQtyValue.textContent = val - 1;
+    });
+    dom.editAddQtyInc.addEventListener('click', () => {
+      let val = parseInt(dom.editAddQtyValue.textContent);
+      if (val < 20) dom.editAddQtyValue.textContent = val + 1;
+    });
+
+    // Add to order confirm
+    dom.editAddConfirm.addEventListener('click', confirmEditAddItem);
+
+    // Save / Cancel edit
+    dom.editOrderCancel.addEventListener('click', closeEditOrder);
+    dom.editOrderSave.addEventListener('click', saveEditOrder);
+
+    // Close edit modal on overlay click
+    dom.editOrderModal.addEventListener('click', (e) => {
+      if (e.target === dom.editOrderModal) closeEditOrder();
+    });
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        closeModifierModal();
-        dom.basketModal.classList.remove('active');
+        if (dom.editOrderModal.classList.contains('active')) {
+          closeEditOrder();
+        } else if (dom.ordersModal.classList.contains('active')) {
+          closeOrdersPanel();
+        } else {
+          closeModifierModal();
+          dom.basketModal.classList.remove('active');
+        }
       }
     });
   }
@@ -401,6 +1067,20 @@
     });
 
     dom.basketModal.classList.add('active');
+  }
+
+  // ─── Time Ago Helper ─────────────────────────────────────────────────
+  function getTimeAgo(dateStr) {
+    const now = new Date();
+    const then = new Date(dateStr);
+    const diffMs = now - then;
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHrs = Math.floor(diffMins / 60);
+    const remMins = diffMins % 60;
+    return `${diffHrs}h ${remMins}m ago`;
   }
 
   // ─── Start ───────────────────────────────────────────────────────────

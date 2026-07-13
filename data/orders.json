@@ -1,42 +1,4 @@
 {
-  "nextId": 3,
-  "orders": [
-    {
-      "id": 1,
-      "tableNumber": "01",
-      "waiterId": 1,
-      "waiterName": "Waiter",
-      "items": [
-        {
-          "name": "Chicken Wings",
-          "quantity": 1,
-          "modifiers": ""
-        },
-        {
-          "name": "Soup of the Day",
-          "quantity": 1,
-          "modifiers": ""
-        }
-      ],
-      "status": "ready",
-      "createdAt": "2026-07-06T08:21:16.027Z",
-      "updatedAt": "2026-07-06T08:22:56.509Z"
-    },
-    {
-      "id": 2,
-      "tableNumber": "01",
-      "waiterId": 1,
-      "waiterName": "Waiter",
-      "items": [
-        {
-          "name": "Paneer Tikka",
-          "quantity": 1,
-          "modifiers": "No onions"
-        }
-      ],
-      "status": "ready",
-      "createdAt": "2026-07-06T08:22:53.126Z",
-      "updatedAt": "2026-07-06T08:23:10.901Z"
-    }
-  ]
+  "nextId": 1,
+  "orders": []
 }

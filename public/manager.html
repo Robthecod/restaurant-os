@@ -13,7 +13,7 @@
   <header class="mgr-header">
     <div class="mgr-header-left">
       <span class="mgr-title">📊 Manager Panel</span>
-      <span class="mgr-subtitle">Menu Administration</span>
+      <span class="mgr-subtitle" id="mgrSubtitle">Menu Administration</span>
     </div>
     <div class="mgr-header-right">
       <span class="sync-status" id="syncStatus">
@@ -24,8 +24,14 @@
     </div>
   </header>
 
-  <!-- ─── Main Layout ─── -->
-  <div class="mgr-layout">
+  <!-- ─── Tab Navigation ─── -->
+  <div class="mgr-tabs">
+    <button class="mgr-tab active" data-tab="menu">📋 Menu</button>
+    <button class="mgr-tab" data-tab="analytics">📈 Analytics</button>
+  </div>
+
+  <!-- ─── Main Layout (Menu View) ─── -->
+  <div class="mgr-layout" id="menuView">
     <!-- ─── Left Panel: Add Item Form ─── -->
     <section class="mgr-panel mgr-form-panel">
       <h2 class="panel-title">➕ Add Menu Item</h2>
@@ -95,6 +101,32 @@
         <div class="preview-loading">Loading menu...</div>
       </div>
     </section>
+  </div>
+
+  <!-- ─── Analytics View ─── -->
+  <div class="analytics-view" id="analyticsView" style="display:none;">
+    <div class="analytics-loading" id="analyticsLoading">
+      <div class="preview-loading">📊 Loading analytics...</div>
+    </div>
+    <div class="analytics-content" id="analyticsContent" style="display:none;">
+      <!-- Summary cards -->
+      <div class="analytics-summary" id="analyticsSummary"></div>
+
+      <!-- Period breakdown -->
+      <div class="analytics-periods" id="analyticsPeriods"></div>
+
+      <!-- Two-column grid: Top Dishes + Time of Day -->
+      <div class="analytics-grid">
+        <div class="analytics-card" id="analyticsTopDishes">
+          <h3 class="analytics-card-title">🏆 Top Selling Dishes</h3>
+          <div class="top-dishes-list" id="topDishesList"></div>
+        </div>
+        <div class="analytics-card" id="analyticsTimeSlots">
+          <h3 class="analytics-card-title">🕐 Sales by Time of Day</h3>
+          <div class="time-slots-list" id="timeSlotsList"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ─── Edit Modal ─── -->

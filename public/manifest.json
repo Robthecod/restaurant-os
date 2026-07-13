@@ -1,7 +1,7 @@
 {
-  "name": "Restaurant OS",
-  "short_name": "Restaurant OS",
-  "description": "Real-Time Restaurant Orchestration Platform",
+  "name": "Roux",
+  "short_name": "Roux",
+  "description": "Real-Time Restaurant Engine",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f0f1a",
