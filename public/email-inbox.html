@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Inbox — Roux</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/email-inbox.css">
+</head>
+<body>
+  <!-- ─── Sidebar ─── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-logo">🥘</span>
+      <span class="sidebar-brand">Roux</span>
+      <span class="sidebar-badge">Inbox</span>
+    </div>
+
+    <div class="sidebar-nav">
+      <button class="sidebar-item active" data-filter="all">
+        <span class="si-icon">📬</span>
+        <span class="si-label">All Leads</span>
+        <span class="si-count" id="countAll">0</span>
+      </button>
+      <button class="sidebar-item" data-filter="demo">
+        <span class="si-icon">📅</span>
+        <span class="si-label">Demo Requests</span>
+        <span class="si-count" id="countDemo">0</span>
+      </button>
+      <button class="sidebar-item" data-filter="signup">
+        <span class="si-icon">🚀</span>
+        <span class="si-label">Free Trials</span>
+        <span class="si-count" id="countSignup">0</span>
+      </button>
+      <button class="sidebar-item" data-filter="newsletter">
+        <span class="si-icon">📬</span>
+        <span class="si-label">Newsletters</span>
+        <span class="si-count" id="countNewsletter">0</span>
+      </button>
+      <button class="sidebar-item" data-filter="pending">
+        <span class="si-icon">⏳</span>
+        <span class="si-label">Pending</span>
+        <span class="si-count" id="countPending">0</span>
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sf-status" id="connStatus">
+        <span class="sf-dot"></span>
+        <span>Connected</span>
+      </div>
+      <div class="sf-info">
+        <a href="/manager.html" target="_blank" class="sf-link">📊 Manager</a>
+        <a href="/" target="_blank" class="sf-link">🏠 Site</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ─── Main Area ─── -->
+  <main class="main-area">
+    <!-- ─── Top Bar ─── -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" id="hamburgerBtn" title="Toggle sidebar">☰</button>
+        <h1 class="topbar-title" id="pageTitle">All Leads</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="tb-btn" id="refreshBtn" title="Refresh">🔄</button>
+        <a href="/" target="_blank" class="tb-btn" title="Landing Page">🏠</a>
+      </div>
+    </header>
+
+    <!-- ─── Stats Bar ─── -->
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-card">
+        <span class="stat-value" id="statTotal">0</span>
+        <span class="stat-label">Total Leads</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value gold" id="statDemos">0</span>
+        <span class="stat-label">Demo Requests</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value green" id="statSignups">0</span>
+        <span class="stat-label">Free Trials</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value accent" id="statPending">0</span>
+        <span class="stat-label">Pending</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value blue" id="statNewsletter">0</span>
+        <span class="stat-label">Newsletter</span>
+      </div>
+    </div>
+
+    <!-- ─── Inbox Content ─── -->
+    <div class="inbox-layout">
+      <!-- ─── Lead List ─── -->
+      <section class="lead-list" id="leadList">
+        <div class="lead-list-header">
+          <span class="llh-label">Leads</span>
+          <div class="llh-controls">
+            <select class="llh-select" id="statusFilter">
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="active">Active</option>
+              <option value="handled">Handled</option>
+            </select>
+          </div>
+        </div>
+        <div class="lead-items" id="leadItems">
+          <div class="lead-empty">
+            <span class="le-icon">📭</span>
+            <span class="le-text">No leads yet</span>
+            <span class="le-sub">Leads will appear here when people sign up or request demos</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── Lead Detail Panel ─── -->
+      <section class="lead-detail" id="leadDetail">
+        <div class="detail-empty" id="detailEmpty">
+          <span class="de-icon">💬</span>
+          <span class="de-text">Select a lead to view details</span>
+          <span class="de-sub">Click on any lead from the list to see their information and conversation history</span>
+        </div>
+
+        <div class="detail-content" id="detailContent" style="display:none;">
+          <!-- Lead Info Header -->
+          <div class="detail-header">
+            <div class="dh-info">
+              <div class="dh-status" id="dhStatus">⏳ Pending</div>
+              <h2 class="dh-name" id="dhName">Name</h2>
+              <div class="dh-meta" id="dhMeta">Restaurant · Email · Phone</div>
+            </div>
+            <div class="dh-actions">
+              <button class="dh-btn dh-btn-handle" id="btnMarkHandled" title="Mark as handled">✅ Handled</button>
+              <button class="dh-btn dh-btn-reply" id="btnReply" title="Send reply">✉️ Reply</button>
+            </div>
+          </div>
+
+          <!-- Lead Details -->
+          <div class="detail-info" id="detailInfo">
+            <div class="di-section">
+              <h4>Contact Details</h4>
+              <div class="di-grid" id="diGrid"></div>
+            </div>
+            <div class="di-section" id="diMessageSection" style="display:none;">
+              <h4>Message</h4>
+              <div class="di-message" id="diMessage"></div>
+            </div>
+          </div>
+
+          <!-- Conversation History -->
+          <div class="detail-conversations" id="detailConversations">
+            <h4>Conversation History</h4>
+            <div class="conv-list" id="convList">
+              <div class="conv-empty">No conversations yet</div>
+            </div>
+          </div>
+
+          <!-- Reply Form -->
+          <div class="reply-form" id="replyForm" style="display:none;">
+            <h4>Send Reply</h4>
+            <div class="rf-row">
+              <input type="text" class="rf-input" id="replySubject" placeholder="Subject line...">
+            </div>
+            <div class="rf-row">
+              <textarea class="rf-textarea" id="replyMessage" placeholder="Write your message here..." rows="4"></textarea>
+            </div>
+            <div class="rf-actions">
+              <button class="rf-cancel" id="replyCancel">Cancel</button>
+              <button class="rf-send" id="replySend">✉️ Send Reply</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ─── Toast Container ─── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ─── Scripts ─── -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/email-inbox.js"></script>
+</body>
+</html>

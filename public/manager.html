@@ -20,6 +20,7 @@
         <span class="sync-dot"></span>
         <span id="syncLabel">Connected</span>
       </span>
+      <a href="/email-inbox.html" class="inbox-link" target="_blank" title="Email Inbox">📬 Inbox</a>
       <span class="connection-dot" id="connDot" title="Connection Status"></span>
     </div>
   </header>
@@ -33,7 +34,7 @@
   <!-- ─── Main Layout (Menu View) ─── -->
   <div class="mgr-layout" id="menuView">
     <!-- ─── Left Panel: Add Item Form ─── -->
-    <section class="mgr-panel mgr-form-panel">
+    <section class="mgr-panel mgr-form-panel reveal-spring">
       <h2 class="panel-title">➕ Add Menu Item</h2>
       <form class="menu-form" id="menuForm">
         <div class="form-group">
@@ -93,7 +94,7 @@
     </section>
 
     <!-- ─── Right Panel: Live Menu Preview ─── -->
-    <section class="mgr-panel mgr-preview-panel">
+    <section class="mgr-panel mgr-preview-panel reveal-spring">
       <h2 class="panel-title">📋 Live Menu Preview</h2>
       <p class="panel-desc">Changes broadcast instantly to all connected waiters</p>
 
@@ -117,11 +118,11 @@
 
       <!-- Two-column grid: Top Dishes + Time of Day -->
       <div class="analytics-grid">
-        <div class="analytics-card" id="analyticsTopDishes">
+        <div class="analytics-card reveal-spring" id="analyticsTopDishes">
           <h3 class="analytics-card-title">🏆 Top Selling Dishes</h3>
           <div class="top-dishes-list" id="topDishesList"></div>
         </div>
-        <div class="analytics-card" id="analyticsTimeSlots">
+        <div class="analytics-card reveal-spring" id="analyticsTimeSlots">
           <h3 class="analytics-card-title">🕐 Sales by Time of Day</h3>
           <div class="time-slots-list" id="timeSlotsList"></div>
         </div>
@@ -165,6 +166,23 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- ─── Scripts ─── -->
+  <script src="/js/motion.js"></script>
+  <script>
+    // ─── Skiper UI-inspired Motion Effects ────────────────────────
+    (function() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      document.addEventListener('DOMContentLoaded', function() {
+        // Hover lift on menu preview panels and analytics cards
+        MotionEffects.tilt('.mgr-panel', { maxTilt: 2, perspective: 1200, scale: 1.002 });
+        MotionEffects.tilt('.analytics-card', { maxTilt: 3, perspective: 1000, scale: 1.005 });
+
+        // Spring reveal on panels
+        MotionEffects.scrollReveal('.mgr-panel, .analytics-card', { threshold: 0.1 });
+      });
+    })();
+  </script>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/socket-client.js"></script>
   <script src="/js/manager.js"></script>

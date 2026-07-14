@@ -26,9 +26,16 @@
     tableBadge: $('#tableBadge'),
     connDot: $('#connDot'),
     ordersToggle: $('#ordersToggle'),
+    hamburgerBtn: $('#hamburgerBtn'),
+    headerCategoryLabel: $('#headerCategoryLabel'),
+
+    // Drawer
+    drawerOverlay: $('#drawerOverlay'),
+    categoryDrawer: $('#categoryDrawer'),
+    drawerTabs: $('#drawerTabs'),
+    drawerClose: $('#drawerClose'),
 
     // Menu / Basket
-    categoryTabs: $('#categoryTabs'),
     menuGrid: $('#menuGrid'),
     menuLoading: $('#menuLoading'),
     basketBar: $('#basketBar'),
@@ -86,6 +93,34 @@
   // ─── New DOM refs for sidebar ───
   const sidebarDom = {};
 
+  // ─── Category Labels Map ────────────────────────────────────────────
+  const categoryLabels = {
+    starters: '🥟 Starters',
+    mains: '🍛 Mains',
+    desserts: '🍨 Desserts',
+    drinks: '🥤 Drinks',
+  };
+
+  // ─── Drawer Functions ────────────────────────────────────────────────
+  function openDrawer() {
+    dom.categoryDrawer.classList.add('open');
+    dom.drawerOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDrawer() {
+    dom.categoryDrawer.classList.remove('open');
+    dom.drawerOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  function selectDrawerTab(category) {
+    state.currentCategory = category;
+    dom.headerCategoryLabel.textContent = categoryLabels[category] || category;
+    renderMenu(category);
+    closeDrawer();
+  }
+
   // ─── Init ────────────────────────────────────────────────────────────
   function init() {
     // Detect table and waiter from URL
@@ -94,6 +129,7 @@
     state.waiterName = params.get('waiter') || 'Waiter';
     dom.tableBadge.textContent = `Table ${state.tableNumber}`;
     dom.ordersTableNum.textContent = state.tableNumber;
+    dom.headerCategoryLabel.textContent = categoryLabels[state.currentCategory];
     document.title = `Waiter Pad — Table ${state.tableNumber}`;
 
     // Cache sidebar DOM refs
@@ -237,23 +273,26 @@
   // ─── Render Menu ─────────────────────────────────────────────────────
   function renderMenu(category) {
     state.currentCategory = category;
+    dom.headerCategoryLabel.textContent = categoryLabels[category] || category;
     if (!state.menu || !state.menu.categories[category]) return;
 
     const items = state.menu.categories[category];
     dom.menuGrid.innerHTML = items
       .map(
-        (item) => `
-        <div class="menu-item ${item.available ? '' : 'unavailable'}" data-id="${item.id}" data-category="${category}">
+        (item, idx) => `
+        <div class="menu-item ${item.available ? '' : 'unavailable'}" data-id="${item.id}" data-category="${category}" style="animation-delay: ${idx * 30}ms">
           <span class="item-available"></span>
+          <span class="item-emoji">${getItemEmoji(item.name)}</span>
           <span class="item-name">${item.name}</span>
           <span class="item-price">₹${item.price.toFixed(2)}</span>
+          <span class="item-tap-hint">Tap to customize</span>
         </div>
       `
       )
       .join('');
 
-    // Update tab active states
-    $$('.tab').forEach((tab) => {
+    // Update drawer tab active states
+    dom.drawerTabs.querySelectorAll('.drawer-tab').forEach((tab) => {
       tab.classList.toggle('active', tab.dataset.category === category);
     });
   }
@@ -290,6 +329,11 @@
     dom.basketCount.textContent = `${count} item${count !== 1 ? 's' : ''}`;
     dom.basketTotal.textContent = `₹${total.toFixed(2)}`;
     dom.sendBtn.disabled = count === 0;
+
+    // Bounce animation on count change
+    dom.basketCount.classList.remove('basket-bounce');
+    void dom.basketCount.offsetWidth;
+    dom.basketCount.classList.add('basket-bounce');
   }
 
   // ─── Send Order ──────────────────────────────────────────────────────
@@ -320,7 +364,7 @@
       if (!res.ok) throw new Error('Failed to send order');
 
       const order = await res.json();
-      showToast(`✅ Order #${order.id} sent to kitchen!`, 'success');
+      showToast(`<span class="toast-icon">✅</span> <span>Order #${order.id} sent to kitchen!</span>`, 'success');
       state.basket = [];
       updateBasketUI();
       dom.basketModal.classList.remove('active');
@@ -328,7 +372,7 @@
       refreshOrders();
     } catch (err) {
       console.error('Send order error:', err);
-      showToast('❌ Failed to send order. Try again.', 'error');
+      showToast('<span class="toast-icon">❌</span> <span>Failed to send order. Try again.</span>', 'error');
     } finally {
       dom.basketSend.disabled = false;
       dom.basketSend.textContent = 'Send to Kitchen →';
@@ -453,14 +497,14 @@
       }
       const data = await res.json();
       if (data.deleted) {
-        showToast(`🗑️ Order #${orderId} deleted (last item removed)`, 'info');
+        showToast(`<span class="toast-icon">🗑️</span> <span>Order #${orderId} deleted (last item removed)</span>`, 'info');
       } else {
-        showToast(`🗑️ Removed "${itemName}" from order`, 'info');
+        showToast(`<span class="toast-icon">🗑️</span> <span>Removed "${itemName}" from order</span>`, 'info');
       }
       refreshOrders();
     } catch (err) {
       console.error('Cancel item error:', err);
-      showToast(`❌ ${err.message}`, 'error');
+      showToast(`<span class="toast-icon">❌</span> <span>${err.message}</span>`, 'error');
     }
   }
 
@@ -471,11 +515,11 @@
     try {
       const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to cancel order');
-      showToast(`🗑️ Order #${orderId} cancelled`, 'info');
+      showToast(`<span class="toast-icon">🗑️</span> <span>Order #${orderId} cancelled</span>`, 'info');
       refreshOrders();
     } catch (err) {
       console.error('Cancel order error:', err);
-      showToast('❌ Failed to cancel order', 'error');
+      showToast('<span class="toast-icon">❌</span> <span>Failed to cancel order</span>', 'error');
     }
   }
 
@@ -488,11 +532,11 @@
         body: JSON.stringify({ status: 'delivered' }),
       });
       if (!res.ok) throw new Error('Failed to update status');
-      showToast(`✅ Order #${orderId} marked as delivered`, 'success');
+      showToast(`<span class="toast-icon">✅</span> <span>Order #${orderId} marked as delivered</span>`, 'success');
       refreshOrders();
     } catch (err) {
       console.error('Mark delivered error:', err);
-      showToast('❌ Failed to update order', 'error');
+      showToast('<span class="toast-icon">❌</span> <span>Failed to update order</span>', 'error');
     }
   }
 
@@ -620,8 +664,7 @@
     }
 
     renderEditOrderItems();
-    dom.editAddSection.style.display = 'none';
-    showToast(`Added ${quantity}x ${item.name}`, 'success');
+    dom.editAddSection.style.display = 'none';      showToast(`<span class="toast-icon">✅</span> <span>Added ${quantity}x ${item.name}</span>`, 'success');
   }
 
   async function saveEditOrder() {
@@ -639,12 +682,12 @@
 
       if (!res.ok) throw new Error('Failed to update order');
 
-      showToast(`✅ Order #${state.editingOrder.id} updated`, 'success');
+      showToast(`<span class="toast-icon">✅</span> <span>Order #${state.editingOrder.id} updated</span>`, 'success');
       closeEditOrder();
       refreshOrders();
     } catch (err) {
       console.error('Edit order error:', err);
-      showToast('❌ Failed to save changes', 'error');
+      showToast('<span class="toast-icon">❌</span> <span>Failed to save changes</span>', 'error');
     } finally {
       dom.editOrderSave.disabled = false;
       dom.editOrderSave.textContent = '💾 Save Changes';
@@ -772,11 +815,97 @@
     }, 10000);
   }
 
+  // ─── Emoji Map ───────────────────────────────────────────────────────
+  function getItemEmoji(name) {
+    const lower = name.toLowerCase();
+    const specific = {
+      'paneer butter masala': '🍛',
+      'paneer tikka masala': '🍛',
+      'paneer tikka': '🧀',
+      'chilli paneer': '🧀',
+      'palak paneer': '🧀',
+      'shahi paneer': '🧀',
+      'dahi ke kabab': '🥙',
+      'hara bhara kabab': '🥙',
+      'veg seekh kabab': '🥙',
+      'masala spring rolls': '🥟',
+      'spinach & corn soup': '🍜',
+      'tomato basil soup': '🍜',
+      'cheese chilli toast': '🧀',
+      'crispy corn': '🌽',
+      'sweet potato fries': '🍟',
+      'garlic bread': '🍞',
+      'nacho supreme': '🧀',
+      'kadai vegetable': '🍲',
+      'mix veg curry': '🍲',
+      'malai kofta': '🧆',
+      'gulab jamun': '🍡',
+      'gajar ka halwa': '🍮',
+      'brownie with ice cream': '🍫',
+      'mango mousse': '🍮',
+      'fresh fruit bowl': '🍎',
+      'ice cream': '🍦',
+      'sizzling brownie': '🍫',
+      'masala chai': '🫖',
+      'cold coffee': '☕',
+      'mango lassi': '🥭',
+      'fresh lime soda': '🍋',
+      'fruit smoothie': '🥤',
+      'coconut water': '🥥',
+      'soft drinks': '🥤',
+      'mint lemonade': '🍋',
+      'iced tea': '🧋',
+      'hot chocolate': '☕',
+      'fresh juice': '🧃',
+    };
+    for (const [key, emoji] of Object.entries(specific)) {
+      if (lower.includes(key)) return emoji;
+    }
+    const generic = {
+      'noodles': '🍜',
+      'pasta': '🍝',
+      'biryani': '🍚',
+      'pulao': '🍚',
+      'fried rice': '🍚',
+      'rice': '🍚',
+      'dal': '🥣',
+      'soup': '🍜',
+      'spring roll': '🥟',
+      'manchurian': '🥟',
+      'mushroom': '🍄',
+      'toast': '🍞',
+      'paratha': '🫓',
+      'naan': '🫓',
+      'thali': '🍱',
+      'sizzler': '🔥',
+      'kabab': '🥙',
+      'halwa': '🍮',
+      'brownie': '🍫',
+      'mousse': '🍮',
+      'tiramisu': '☕',
+      'rasmalai': '🥛',
+      'cheesecake': '🍰',
+      'kulfi': '🍦',
+      'phirni': '🍮',
+      'chai': '🫖',
+      'coffee': '☕',
+      'lassi': '🥤',
+      'buttermilk': '🥛',
+      'lemonade': '🍋',
+      'juice': '🧃',
+      'paneer': '🧀',
+    };
+    for (const [key, emoji] of Object.entries(generic)) {
+      if (lower.includes(key)) return emoji;
+    }
+    return '🍽️';
+  }
+
   // ─── Toast Notifications ─────────────────────────────────────────────
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.textContent = message;
+    toast.innerHTML = message;
     dom.toastContainer.appendChild(toast);
 
     setTimeout(() => {
@@ -836,7 +965,7 @@
             document.title = `Waiter Pad — Table ${newTable}`;
             // Re-fetch orders for the new table
             refreshOrders();
-            showToast(`📋 Switched to Table ${newTable}`, 'info');
+            showToast(`<span class="toast-icon">📋</span> <span>Switched to Table ${newTable}</span>`, 'info');
           } else {
             dom.tableBadge.textContent = `Table ${currentTable}`;
           }
@@ -868,11 +997,27 @@
     // Editable table badge
     setupEditableTable();
 
-    // Category tabs
-    dom.categoryTabs.addEventListener('click', (e) => {
-      const tab = e.target.closest('.tab');
+    // Hamburger: Open drawer
+    dom.hamburgerBtn.addEventListener('click', openDrawer);
+
+    // Drawer overlay: Close
+    dom.drawerOverlay.addEventListener('click', closeDrawer);
+
+    // Drawer close button
+    dom.drawerClose.addEventListener('click', closeDrawer);
+
+    // Drawer tab selection
+    dom.drawerTabs.addEventListener('click', (e) => {
+      const tab = e.target.closest('.drawer-tab');
       if (tab) {
-        renderMenu(tab.dataset.category);
+        selectDrawerTab(tab.dataset.category);
+      }
+    });
+
+    // Close drawer with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && dom.categoryDrawer.classList.contains('open')) {
+        closeDrawer();
       }
     });
 
@@ -920,7 +1065,7 @@
       const modifiers = dom.modifierInput.value.trim();
       addToBasket(state.selectedItem, quantity, modifiers);
       closeModifierModal();
-      showToast(`Added ${quantity}x ${state.selectedItem.name}`, 'success');
+      showToast(`<span class="toast-icon">✅</span> <span>Added ${quantity}x ${state.selectedItem.name}</span>`, 'success');
     });
 
     // Modal Skip button
@@ -929,7 +1074,7 @@
       const quantity = parseInt(dom.qtyValue.textContent);
       addToBasket(state.selectedItem, quantity, '');
       closeModifierModal();
-      showToast(`Added ${quantity}x ${state.selectedItem.name}`, 'success');
+      showToast(`<span class="toast-icon">✅</span> <span>Added ${quantity}x ${state.selectedItem.name}</span>`, 'success');
     });
 
     // Close modal on overlay click

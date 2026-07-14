@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const server = http.createServer(app);
@@ -18,6 +19,123 @@ const DATA_DIR = path.join(__dirname, 'data');
 const MENU_FILE = path.join(DATA_DIR, 'menu.json');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 const LEADS_FILE = path.join(DATA_DIR, 'leads.json');
+const EMAILS_DIR = path.join(__dirname, 'public', 'emails');
+
+// ─── Email Configuration ───────────────────────────────────────────────
+// Set these env vars to enable real email sending via SMTP.
+// Without them, emails are logged to console and stored in the outbox.
+const SMTP_HOST = process.env.SMTP_HOST || '';
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@roux.app';
+const FROM_NAME = process.env.FROM_NAME || 'Roux';
+let emailTransporter = null;
+
+if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+  emailTransporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+  });
+  console.log(`  📧 Email service configured: ${SMTP_HOST} (${FROM_EMAIL})`);
+} else {
+  console.log('  📧 Email service: DISABLED (set SMTP_HOST, SMTP_USER, SMTP_PASS to enable)');
+}
+
+// ─── Simple Template Engine ────────────────────────────────────────────
+// Handles: {{var}}, {{#section}}...{{/section}} (conditionals & arrays)
+function renderTemplate(template, data) {
+  let html = template;
+
+  // Handle {{#key}}...{{/key}} sections — arrays iterate, scalars check truthiness
+  html = html.replace(/\{\{#(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (match, key, content) => {
+    const val = data[key];
+    if (val === undefined || val === null) return '';
+    if (Array.isArray(val)) {
+      // Iterate over array items, rendering content for each
+      return val.map((item) => {
+        // Merge item into data scope for variable replacement
+        const scope = Object.assign({}, data, item);
+        let result = content;
+        result = result.replace(/\{\{(\w+)\}\}/g, (m, k) => {
+          const v = scope[k];
+          if (v === undefined || v === null) return '';
+          return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        });
+        return result;
+      }).join('');
+    }
+    // Scalar: return content if truthy
+    return val ? content : '';
+  });
+
+  // Handle simple variable replacement {{var}}
+  html = html.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    const val = data[key];
+    if (val === undefined || val === null) return '';
+    return String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  });
+
+  return html;
+}
+
+// ─── Load & Render Email Template ──────────────────────────────────────
+function loadEmailTemplate(templateName, data) {
+  const filePath = path.join(EMAILS_DIR, templateName + '.html');
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Email template not found: ${templateName}`);
+  }
+  const template = fs.readFileSync(filePath, 'utf-8');
+  return renderTemplate(template, data);
+}
+
+// ─── Send Email (or log if no transporter) ─────────────────────────────
+async function sendEmail({ to, subject, html, leadId, type }) {
+  const record = {
+    to,
+    subject,
+    type: type || 'general',
+    leadId: leadId || null,
+    sentAt: new Date().toISOString(),
+    delivered: !!emailTransporter,
+  };
+
+  if (emailTransporter) {
+    try {
+      const info = await emailTransporter.sendMail({
+        from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+        to,
+        subject,
+        html,
+      });
+      record.messageId = info.messageId;
+      console.log(`  📧 Email sent to ${to}: "${subject}" (${info.messageId})`);
+    } catch (err) {
+      console.error(`  ❌ Email FAILED to ${to}: "${subject}" — ${err.message}`);
+      record.delivered = false;
+      record.error = err.message;
+    }
+  } else {
+    console.log(`  📧 [EMAIL LOG] To: ${to}`);
+    console.log(`               Subject: ${subject}`);
+    console.log(`               Template: ${type}`);
+  }
+
+  // Store in outbox log
+  try {
+    const outboxFile = path.join(DATA_DIR, 'outbox.json');
+    let outbox = [];
+    if (fs.existsSync(outboxFile)) {
+      outbox = JSON.parse(fs.readFileSync(outboxFile, 'utf-8'));
+    }
+    outbox.push(record);
+    fs.writeFileSync(outboxFile, JSON.stringify(outbox, null, 2));
+  } catch (e) { /* silent */ }
+
+  return record;
+}
 
 // ─── File System Helpers ────────────────────────────────────────────────
 
@@ -71,80 +189,105 @@ ensureDataDir();
 initDataFile(MENU_FILE, {
   categories: {
     starters: [
-      { id: 1, name: 'Crispy Corn', price: 395, available: true },
-      { id: 2, name: 'Paneer Tikka', price: 495, available: true },
-      { id: 3, name: 'Garlic Bread with Cheese', price: 395, available: true },
-      { id: 4, name: 'Hara Bhara Kabab', price: 395, available: true },
-      { id: 5, name: 'Masala Spring Rolls', price: 395, available: true },
-      { id: 6, name: 'Mushroom Kurkure', price: 425, available: true },
-      { id: 7, name: 'Nachos Supreme', price: 495, available: true },
-      { id: 8, name: 'Sweet Potato Fries', price: 375, available: true },
-      { id: 9, name: 'Chilli Paneer', price: 495, available: true },
-      { id: 10, name: 'Veg Seekh Kabab', price: 425, available: true },
-      { id: 11, name: 'Dahi Ke Kabab', price: 495, available: true },
-      { id: 12, name: 'Spinach & Corn Soup', price: 325, available: true },
-      { id: 13, name: 'Tomato Basil Soup', price: 295, available: true },
-      { id: 14, name: 'Cheese Chilli Toast', price: 375, available: true },
+      { id: 1, name: 'Crispy Corn', price: 89, available: true },
+      { id: 2, name: 'Paneer Tikka', price: 299, available: true },
+      { id: 3, name: 'Garlic Bread with Cheese', price: 239, available: true },
+      { id: 4, name: 'Hara Bhara Kabab', price: 239, available: true },
+      { id: 5, name: 'Masala Spring Rolls', price: 239, available: true },
+      { id: 6, name: 'Mushroom Kurkure', price: 255, available: true },
+      { id: 7, name: 'Nachos Supreme', price: 299, available: true },
+      { id: 8, name: 'Sweet Potato Fries', price: 225, available: true },
+      { id: 9, name: 'Chilli Paneer', price: 299, available: true },
+      { id: 10, name: 'Veg Seekh Kabab', price: 255, available: true },
+      { id: 11, name: 'Dahi Ke Kabab', price: 299, available: true },
+      { id: 12, name: 'Spinach & Corn Soup', price: 195, available: true },
+      { id: 13, name: 'Tomato Basil Soup', price: 179, available: true },
+      { id: 14, name: 'Cheese Chilli Toast', price: 225, available: true },
     ],
     mains: [
-      { id: 15, name: 'Veg Biryani', price: 595, available: true },
-      { id: 16, name: 'Paneer Butter Masala', price: 595, available: true },
-      { id: 17, name: 'Dal Makhani', price: 525, available: true },
-      { id: 18, name: 'Shahi Paneer', price: 625, available: true },
-      { id: 19, name: 'Kadai Vegetable', price: 545, available: true },
-      { id: 20, name: 'Malai Kofta', price: 595, available: true },
-      { id: 21, name: 'Dal Tadka', price: 475, available: true },
-      { id: 22, name: 'Palak Paneer', price: 545, available: true },
-      { id: 23, name: 'Paneer Tikka Masala', price: 625, available: true },
-      { id: 24, name: 'Mix Veg Curry', price: 495, available: true },
-      { id: 25, name: 'Aloo Gobi', price: 445, available: true },
-      { id: 26, name: 'Bhindi Masala', price: 445, available: true },
-      { id: 27, name: 'Jeera Rice', price: 295, available: true },
-      { id: 28, name: 'Lemon Rice', price: 345, available: true },
-      { id: 29, name: 'Veg Pulao', price: 495, available: true },
-      { id: 30, name: 'Veg Pasta in White Sauce', price: 595, available: true },
-      { id: 31, name: 'Veg Pasta in Red Sauce', price: 545, available: true },
-      { id: 32, name: 'Veg Fried Rice', price: 495, available: true },
-      { id: 33, name: 'Hakka Noodles', price: 495, available: true },
-      { id: 34, name: 'Veg Manchurian Gravy', price: 495, available: true },
-      { id: 35, name: 'Stuffed Paratha', price: 295, available: true },
-      { id: 36, name: 'Butter Naan', price: 195, available: true },
-      { id: 37, name: 'Special Veg Thali', price: 795, available: true },
-      { id: 38, name: 'Veg Sizzler', price: 725, available: true },
+      { id: 15, name: 'Veg Biryani', price: 359, available: true },
+      { id: 16, name: 'Paneer Butter Masala', price: 359, available: true },
+      { id: 17, name: 'Dal Makhani', price: 315, available: true },
+      { id: 18, name: 'Shahi Paneer', price: 375, available: true },
+      { id: 19, name: 'Kadai Vegetable', price: 329, available: true },
+      { id: 20, name: 'Malai Kofta', price: 359, available: true },
+      { id: 21, name: 'Dal Tadka', price: 285, available: true },
+      { id: 22, name: 'Palak Paneer', price: 329, available: true },
+      { id: 23, name: 'Paneer Tikka Masala', price: 375, available: true },
+      { id: 24, name: 'Mix Veg Curry', price: 299, available: true },
+      { id: 25, name: 'Aloo Gobi', price: 269, available: true },
+      { id: 26, name: 'Bhindi Masala', price: 269, available: true },
+      { id: 27, name: 'Jeera Rice', price: 179, available: true },
+      { id: 28, name: 'Lemon Rice', price: 209, available: true },
+      { id: 29, name: 'Veg Pulao', price: 299, available: true },
+      { id: 30, name: 'Veg Pasta in White Sauce', price: 359, available: true },
+      { id: 31, name: 'Veg Pasta in Red Sauce', price: 329, available: true },
+      { id: 32, name: 'Veg Fried Rice', price: 299, available: true },
+      { id: 33, name: 'Hakka Noodles', price: 299, available: true },
+      { id: 34, name: 'Veg Manchurian Gravy', price: 299, available: true },
+      { id: 35, name: 'Stuffed Paratha', price: 179, available: true },
+      { id: 36, name: 'Butter Naan', price: 119, available: true },
+      { id: 37, name: 'Special Veg Thali', price: 479, available: true },
+      { id: 38, name: 'Veg Sizzler', price: 435, available: true },
     ],
     desserts: [
-      { id: 39, name: 'Gulab Jamun (2 pcs)', price: 295, available: true },
-      { id: 40, name: 'Gajar Ka Halwa', price: 325, available: true },
-      { id: 41, name: 'Brownie with Ice Cream', price: 395, available: true },
-      { id: 42, name: 'Mango Mousse', price: 375, available: true },
-      { id: 43, name: 'Tiramisu', price: 425, available: true },
-      { id: 44, name: 'Rasmalai', price: 345, available: true },
-      { id: 45, name: 'Ice Cream (2 scoops)', price: 245, available: true },
-      { id: 46, name: 'Sizzling Brownie', price: 445, available: true },
-      { id: 47, name: 'Phirni', price: 295, available: true },
-      { id: 48, name: 'Fresh Fruit Bowl', price: 345, available: true },
-      { id: 49, name: 'Kulfi', price: 325, available: true },
-      { id: 50, name: 'Cheesecake', price: 395, available: true },
+      { id: 39, name: 'Gulab Jamun (2 pcs)', price: 179, available: true },
+      { id: 40, name: 'Gajar Ka Halwa', price: 195, available: true },
+      { id: 41, name: 'Brownie with Ice Cream', price: 239, available: true },
+      { id: 42, name: 'Mango Mousse', price: 225, available: true },
+      { id: 43, name: 'Tiramisu', price: 255, available: true },
+      { id: 44, name: 'Rasmalai', price: 209, available: true },
+      { id: 45, name: 'Ice Cream (2 scoops)', price: 149, available: true },
+      { id: 46, name: 'Sizzling Brownie', price: 269, available: true },
+      { id: 47, name: 'Phirni', price: 179, available: true },
+      { id: 48, name: 'Fresh Fruit Bowl', price: 209, available: true },
+      { id: 49, name: 'Kulfi', price: 195, available: true },
+      { id: 50, name: 'Cheesecake', price: 239, available: true },
     ],
     drinks: [
-      { id: 51, name: 'Masala Chai', price: 195, available: true },
-      { id: 52, name: 'Cold Coffee', price: 295, available: true },
-      { id: 53, name: 'Mango Lassi', price: 345, available: true },
-      { id: 54, name: 'Fresh Lime Soda', price: 195, available: true },
-      { id: 55, name: 'Buttermilk (Chaas)', price: 175, available: true },
-      { id: 56, name: 'Fruit Smoothie', price: 375, available: true },
-      { id: 57, name: 'Coconut Water', price: 225, available: true },
-      { id: 58, name: 'Soft Drinks', price: 99, available: true },
-      { id: 59, name: 'Mint Lemonade', price: 225, available: true },
-      { id: 60, name: 'Iced Tea', price: 245, available: true },
-      { id: 61, name: 'Hot Chocolate', price: 325, available: true },
-      { id: 62, name: 'Fresh Juice (Seasonal)', price: 295, available: true },
+      { id: 51, name: 'Masala Chai', price: 119, available: true },
+      { id: 52, name: 'Cold Coffee', price: 179, available: true },
+      { id: 53, name: 'Mango Lassi', price: 209, available: true },
+      { id: 54, name: 'Fresh Lime Soda', price: 119, available: true },
+      { id: 55, name: 'Buttermilk (Chaas)', price: 105, available: true },
+      { id: 56, name: 'Fruit Smoothie', price: 225, available: true },
+      { id: 57, name: 'Coconut Water', price: 135, available: true },
+      { id: 58, name: 'Soft Drinks', price: 59, available: true },
+      { id: 59, name: 'Mint Lemonade', price: 135, available: true },
+      { id: 60, name: 'Iced Tea', price: 149, available: true },
+      { id: 61, name: 'Hot Chocolate', price: 195, available: true },
+      { id: 62, name: 'Fresh Juice (Seasonal)', price: 179, available: true },
     ],
   },
 });
 
 initDataFile(ORDERS_FILE, { nextId: 1, orders: [] });
-initDataFile(LEADS_FILE, { nextDemoId: 1, nextSignupId: 1, demos: [], signups: [] });
+initDataFile(LEADS_FILE, {
+  nextDemoId: 1,
+  nextSignupId: 1,
+  nextNewsletterId: 1,
+  demos: [],
+  signups: [],
+  newsletters: [],
+  conversations: [],
+});
+
+// ─── Migrate existing leads.json to new schema ────────────────────────
+if (fs.existsSync(LEADS_FILE)) {
+  try {
+    const leadsData = JSON.parse(fs.readFileSync(LEADS_FILE, 'utf-8'));
+    let needsWrite = false;
+    if (!leadsData.newsletters) { leadsData.newsletters = []; needsWrite = true; }
+    if (!leadsData.conversations) { leadsData.conversations = []; needsWrite = true; }
+    if (!leadsData.nextNewsletterId) { leadsData.nextNewsletterId = 1; needsWrite = true; }
+    if (needsWrite) {
+      fs.writeFileSync(LEADS_FILE, JSON.stringify(leadsData, null, 2));
+      console.log('  📋 Migrated leads.json to new schema');
+    }
+  } catch (e) {
+    console.error('  ⚠️ Failed to migrate leads.json:', e.message);
+  }
+}
 
 // ─── Middleware ──────────────────────────────────────────────────────────
 
@@ -209,6 +352,40 @@ app.post('/api/demo', (req, res) => {
   }
 });
 
+// POST /api/newsletter — Newsletter subscription
+app.post('/api/newsletter', (req, res) => {
+  try {
+    const data = readJSON(LEADS_FILE);
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'email is required' });
+    }
+
+    // Check for duplicates
+    const exists = data.newsletters.some((s) => s.email === email);
+    if (exists) {
+      return res.json({ success: true, message: 'Already subscribed' });
+    }
+
+    const sub = {
+      id: data.nextNewsletterId,
+      email,
+      subscribedAt: new Date().toISOString(),
+    };
+
+    data.nextNewsletterId++;
+    data.newsletters.push(sub);
+    writeJSON(LEADS_FILE, data);
+
+    console.log(`  📬 Newsletter signup: ${email}`);
+    res.status(201).json({ success: true, id: sub.id });
+  } catch (err) {
+    console.error('Newsletter error:', err);
+    res.status(500).json({ error: 'Failed to subscribe' });
+  }
+});
+
 // POST /api/signup — Start free trial signup
 app.post('/api/signup', (req, res) => {
   try {
@@ -245,6 +422,222 @@ app.post('/api/signup', (req, res) => {
   } catch (err) {
     console.error('Signup error:', err);
     res.status(500).json({ error: 'Failed to sign up' });
+  }
+});
+
+// ─── EMAIL & LEAD MANAGEMENT API ──────────────────────────────────
+
+// GET /api/leads — Get all leads (demos, signups, newsletters, conversations)
+// Supports ?type=demo|signup|newsletter|all and ?status=pending|active|handled
+app.get('/api/leads', (req, res) => {
+  try {
+    const data = readJSON(LEADS_FILE);
+    const type = req.query.type || 'all';
+    const statusFilter = req.query.status || 'all';
+
+    let results = [];
+
+    if (type === 'all' || type === 'demo') {
+      let demos = data.demos.map((d) => ({ ...d, leadType: 'demo' }));
+      if (statusFilter !== 'all') demos = demos.filter((d) => d.status === statusFilter);
+      results = results.concat(demos);
+    }
+    if (type === 'all' || type === 'signup') {
+      let signups = data.signups.map((s) => ({ ...s, leadType: 'signup' }));
+      if (statusFilter !== 'all') signups = signups.filter((s) => s.status === statusFilter);
+      results = results.concat(signups);
+    }
+    if (type === 'all' || type === 'newsletter') {
+      results = results.concat(data.newsletters.map((s) => ({ ...s, leadType: 'newsletter' })));
+    }
+
+    // Sort by newest first
+    results.sort((a, b) => new Date(b.createdAt || b.subscribedAt) - new Date(a.createdAt || a.subscribedAt));
+
+    res.json({
+      total: results.length,
+      demosCount: data.demos.length,
+      signupsCount: data.signups.length,
+      newslettersCount: data.newsletters.length,
+      pendingCount: data.demos.filter((d) => d.status === 'pending').length + data.signups.filter((s) => s.status === 'pending').length,
+      leads: results,
+    });
+  } catch (err) {
+    console.error('Get leads error:', err);
+    res.status(500).json({ error: 'Failed to fetch leads' });
+  }
+});
+
+// GET /api/leads/:type/:id — Get a single lead
+app.get('/api/leads/:type/:id', (req, res) => {
+  try {
+    const data = readJSON(LEADS_FILE);
+    const { type, id } = req.params;
+    const leadId = parseInt(id);
+
+    let lead;
+    if (type === 'demo') lead = data.demos.find((d) => d.id === leadId);
+    else if (type === 'signup') lead = data.signups.find((s) => s.id === leadId);
+
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    // Get conversations for this lead
+    const conversations = data.conversations.filter((c) => c.leadType === type && c.leadId === leadId);
+
+    res.json({ lead: { ...lead, leadType: type }, conversations });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch lead' });
+  }
+});
+
+// PUT /api/leads/:type/:id — Update lead status
+app.put('/api/leads/:type/:id', (req, res) => {
+  try {
+    const data = readJSON(LEADS_FILE);
+    const { type, id } = req.params;
+    const leadId = parseInt(id);
+    const { status, notes } = req.body;
+
+    let lead;
+    let list;
+    if (type === 'demo') { list = data.demos; lead = list.find((d) => d.id === leadId); }
+    else if (type === 'signup') { list = data.signups; lead = list.find((s) => s.id === leadId); }
+
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    if (status) lead.status = status;
+    if (notes) lead.notes = notes;
+    lead.updatedAt = new Date().toISOString();
+
+    writeJSON(LEADS_FILE, data);
+    io.emit('lead_updated', { ...lead, leadType: type });
+
+    console.log(`  Lead #${leadId} (${type}) updated: status=${status || 'unchanged'}`);
+    res.json({ ...lead, leadType: type });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update lead' });
+  }
+});
+
+// POST /api/leads/:type/:id/reply — Reply to a lead (renders template + sends email)
+app.post('/api/leads/:type/:id/reply', async (req, res) => {
+  try {
+    const data = readJSON(LEADS_FILE);
+    const { type, id } = req.params;
+    const leadId = parseInt(id);
+    const { message, subject, templateName } = req.body;
+
+    let lead;
+    if (type === 'demo') lead = data.demos.find((d) => d.id === leadId);
+    else if (type === 'signup') lead = data.signups.find((s) => s.id === leadId);
+
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    // Build email content
+    const template = templateName || 'reply';
+    const emailSubject = subject || `Re: Your ${type === 'demo' ? 'Demo Request' : 'Roux Signup'}`;
+    const emailHtml = loadEmailTemplate(template, {
+      name: lead.name,
+      email: lead.email,
+      restaurant: lead.restaurant || 'your restaurant',
+      message: message || 'Thanks for reaching out to Roux! We got your inquiry and will get back to you shortly.',
+      actionUrl: `${req.protocol}://${req.get('host')}/`,
+      actionText: 'Visit Roux',
+    });
+
+    // Send the email
+    const record = await sendEmail({
+      to: lead.email,
+      subject: emailSubject,
+      html: emailHtml,
+      leadId,
+      type: `reply_${type}`,
+    });
+
+    // Log the conversation
+    if (!data.conversations) data.conversations = [];
+    data.conversations.push({
+      id: data.conversations.length + 1,
+      leadType: type,
+      leadId,
+      direction: 'outgoing',
+      subject: emailSubject,
+      message: message || '',
+      sentAt: record.sentAt,
+      delivered: record.delivered,
+    });
+    writeJSON(LEADS_FILE, data);
+
+    res.json({ success: true, email: record, conversation: data.conversations[data.conversations.length - 1] });
+  } catch (err) {
+    console.error('Reply error:', err);
+    res.status(500).json({ error: 'Failed to send reply' });
+  }
+});
+
+// POST /api/email/send — Send a custom email (AI-friendly)
+app.post('/api/email/send', async (req, res) => {
+  try {
+    const { to, subject, html, templateName, templateData } = req.body;
+
+    if (!to || !subject) {
+      return res.status(400).json({ error: 'to and subject are required' });
+    }
+
+    let emailHtml = html;
+    if (templateName && !html) {
+      emailHtml = loadEmailTemplate(templateName, templateData || {});
+    }
+
+    const record = await sendEmail({ to, subject, html: emailHtml, type: 'custom' });
+    res.json({ success: true, email: record });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to send email' });
+  }
+});
+
+// GET /api/email/templates — List available email templates
+app.get('/api/email/templates', (req, res) => {
+  try {
+    const files = fs.readdirSync(EMAILS_DIR).filter((f) => f.endsWith('.html'));
+    const templates = files.map((f) => ({
+      name: f.replace('.html', ''),
+      filename: f,
+    }));
+    res.json({ templates });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to list templates' });
+  }
+});
+
+// GET /api/email/templates/:name — Preview a rendered template
+app.get('/api/email/templates/:name', (req, res) => {
+  try {
+    const { name } = req.params;
+    const sampleData = {
+      name: 'Sample Guest',
+      email: 'guest@restaurant.com',
+      restaurant: 'Sample Restaurant',
+      date: new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+      phone: '+91 98765 43210',
+      message: 'This is a sample message from the Roux team.',
+      orderId: '42',
+      tableNumber: '05',
+      itemCount: '3',
+      total: '1,247',
+      managerUrl: `http://localhost:${PORT}/manager.html`,
+      waiterUrl: `http://localhost:${PORT}/waiter.html?table=01`,
+      kitchenUrl: `http://localhost:${PORT}/kitchen.html`,
+      trackUrl: `http://localhost:${PORT}/customer.html?table=05`,
+      items: [{ name: 'Paneer Butter Masala', price: '359', qty: '2', modifiers: 'Extra spicy' }, { name: 'Butter Naan', price: '119', qty: '3' }],
+      actionUrl: `http://localhost:${PORT}/`,
+      actionText: 'Get Started',
+    };
+
+    const html = loadEmailTemplate(name, sampleData);
+    res.send(html);
+  } catch (err) {
+    res.status(404).json({ error: `Template "${name}" not found` });
   }
 });
 
@@ -859,5 +1252,6 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`  📋 Waiter Pad:     http://localhost:${PORT}/waiter.html?table=01`);
   console.log(`  🍳 Kitchen Display: http://localhost:${PORT}/kitchen.html`);
   console.log(`  📊 Manager Panel:   http://localhost:${PORT}/manager.html`);
+  console.log(`  📬 Email Inbox:     http://localhost:${PORT}/email-inbox.html`);
   console.log('');
 });

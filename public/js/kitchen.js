@@ -211,6 +211,7 @@
             <div class="order-item item-status-${itemStatus}" data-index="${idx}">
               <div class="order-item-main">
                 <div class="order-item-top">
+                  <span class="order-item-emoji">${getItemEmoji(item.name)}</span>
                   <span class="order-item-name">${item.name}</span>
                   <span class="order-item-qty">×${item.quantity}</span>
                   <span class="item-status-dot status-${itemStatus}" title="${itemStatus}"></span>
@@ -283,7 +284,7 @@
       // Update will come via socket
     } catch (err) {
       console.error('Update item status error:', err);
-      showToast(`❌ ${err.message}`, 'error');
+      showToast(`<span class="toast-icon">❌</span> <span>${err.message}</span>`, 'error');
     }
   }
 
@@ -293,10 +294,10 @@
     try {
       const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete order');
-      showToast(`🗑️ Order #${orderId} cancelled`, 'info');
+      showToast(`<span class="toast-icon">🗑️</span> <span>Order #${orderId} cancelled</span>`, 'info');
     } catch (err) {
       console.error('Delete order error:', err);
-      showToast('❌ Failed to cancel order', 'error');
+      showToast('<span class="toast-icon">❌</span> <span>Failed to cancel order</span>', 'error');
     }
   }
 
@@ -348,11 +349,97 @@
     return `${diffHrs}h ${remMins}m ago`;
   }
 
+  // ─── Emoji Map ───────────────────────────────────────────────────────
+  function getItemEmoji(name) {
+    const lower = name.toLowerCase();
+    const specific = {
+      'paneer butter masala': '🍛',
+      'paneer tikka masala': '🍛',
+      'paneer tikka': '🧀',
+      'chilli paneer': '🧀',
+      'palak paneer': '🧀',
+      'shahi paneer': '🧀',
+      'dahi ke kabab': '🥙',
+      'hara bhara kabab': '🥙',
+      'veg seekh kabab': '🥙',
+      'masala spring rolls': '🥟',
+      'spinach & corn soup': '🍜',
+      'tomato basil soup': '🍜',
+      'cheese chilli toast': '🧀',
+      'crispy corn': '🌽',
+      'sweet potato fries': '🍟',
+      'garlic bread': '🍞',
+      'nachos': '🧀',
+      'kadai vegetable': '🍲',
+      'mix veg curry': '🍲',
+      'malai kofta': '🧆',
+      'gulab jamun': '🍡',
+      'gajar ka halwa': '🍮',
+      'brownie with ice cream': '🍫',
+      'mango mousse': '🍮',
+      'fresh fruit bowl': '🍎',
+      'ice cream': '🍦',
+      'sizzling brownie': '🍫',
+      'masala chai': '🫖',
+      'cold coffee': '☕',
+      'mango lassi': '🥭',
+      'fresh lime soda': '🍋',
+      'fruit smoothie': '🥤',
+      'coconut water': '🥥',
+      'soft drinks': '🥤',
+      'mint lemonade': '🍋',
+      'iced tea': '🧋',
+      'hot chocolate': '☕',
+      'fresh juice': '🧃',
+    };
+    for (const [key, emoji] of Object.entries(specific)) {
+      if (lower.includes(key)) return emoji;
+    }
+    const generic = {
+      'noodles': '🍜',
+      'pasta': '🍝',
+      'biryani': '🍚',
+      'pulao': '🍚',
+      'fried rice': '🍚',
+      'rice': '🍚',
+      'dal': '🥣',
+      'soup': '🍜',
+      'spring roll': '🥟',
+      'manchurian': '🥟',
+      'mushroom': '🍄',
+      'toast': '🍞',
+      'paratha': '🫓',
+      'naan': '🫓',
+      'thali': '🍱',
+      'sizzler': '🔥',
+      'kabab': '🥙',
+      'halwa': '🍮',
+      'brownie': '🍫',
+      'mousse': '🍮',
+      'tiramisu': '☕',
+      'rasmalai': '🥛',
+      'cheesecake': '🍰',
+      'kulfi': '🍦',
+      'phirni': '🍮',
+      'chai': '🫖',
+      'coffee': '☕',
+      'lassi': '🥤',
+      'buttermilk': '🥛',
+      'lemonade': '🍋',
+      'juice': '🧃',
+      'paneer': '🧀',
+    };
+    for (const [key, emoji] of Object.entries(generic)) {
+      if (lower.includes(key)) return emoji;
+    }
+    return '🍽️';
+  }
+
   // ─── Toast ───────────────────────────────────────────────────────────
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.textContent = message;
+    toast.innerHTML = message;
     dom.toastContainer.appendChild(toast);
     setTimeout(() => {
       toast.classList.add('removing');

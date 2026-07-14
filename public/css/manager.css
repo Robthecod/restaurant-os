@@ -30,6 +30,25 @@
   gap: 14px;
 }
 
+.mgr-header-right .inbox-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent-gold);
+  text-decoration: none;
+  transition: var(--transition);
+  border: 1px solid rgba(247,151,30,0.2);
+  background: rgba(247,151,30,0.08);
+}
+.mgr-header-right .inbox-link:hover {
+  background: rgba(247,151,30,0.15);
+  border-color: rgba(247,151,30,0.4);
+}
+
 .sync-status {
   display: flex;
   align-items: center;

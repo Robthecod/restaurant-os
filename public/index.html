@@ -63,7 +63,7 @@
       --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
       --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
     }
-    html { scroll-behavior: smooth; }
+    html.lenis, html.lenis body { height: auto; }
     body {
       font-family: var(--font);
       background: var(--bg-primary);
@@ -1192,15 +1192,15 @@
           </div>
           <div class="hero-stats hero-entrance hero-entrance-delay-4">
             <div class="hero-stat">
-              <h3><span class="gold">0.3</span>s</h3>
+              <h3><span class="motion-counter gold" data-target="0.3" data-suffix="s" data-decimals="1">0.0</span></h3>
               <p>Average order latency</p>
             </div>
             <div class="hero-stat">
-              <h3><span class="green">99.9</span>%</h3>
+              <h3><span class="motion-counter green" data-target="99.9" data-suffix="%" data-decimals="1">0.0</span></h3>
               <p>Uptime guarantee</p>
             </div>
             <div class="hero-stat">
-              <h3><span class="blue">3</span></h3>
+              <h3><span class="motion-counter blue" data-target="3" data-suffix="" data-decimals="0">0</span></h3>
               <p>Devices, 1 system</p>
             </div>
           </div>
@@ -1480,7 +1480,7 @@
         <h2>Ready to bring your restaurant online?</h2>
         <p>
           Join restaurant owners who've ditched their clunky POS for something that
-          actually works. Free 14-day trial, no credit card required.
+          actually works. Free 7-day trial, no credit card required.
         </p>
         <div class="cta-actions reveal reveal-delay-1">
           <a href="#" class="btn btn-primary btn-lg" onclick="openModal('signupModal');return false;">Start Free Trial</a>
@@ -1619,7 +1619,7 @@
       </div>
       <div class="footer-middle" style="border-top:1px solid var(--border-color);padding:24px 0;margin-top:32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
         <div style="display:flex;align-items:center;gap:12px;">
-          <span style="font-size:0.88rem;color:var(--text-secondary);font-weight:600;">📬 Stay in the loop</span>            <form class="newsletter-form" style="display:flex;gap:8px;" onsubmit="event.preventDefault();showToast('🙌', 'Thanks for subscribing! We\'ll keep you posted.');this.querySelector('input').value='';">
+          <span style="font-size:0.88rem;color:var(--text-secondary);font-weight:600;">📬 Stay in the loop</span>            <form class="newsletter-form" style="display:flex;gap:8px;" onsubmit="return submitNewsletter(event, this)">
             <input type="email" placeholder="your@email.com" required class="newsletter-input">
             <button type="submit" class="btn btn-primary" style="padding:10px 18px;font-size:0.82rem;">Subscribe</button>
           </form>
@@ -1697,7 +1697,7 @@
       <button class="modal-close" onclick="closeModal('signupModal')">✕</button>
       <span class="modal-icon">🚀</span>
       <h2>Start Your Free Trial</h2>
-      <p>No credit card required. 14 days of full access, no strings attached.</p>
+      <p>No credit card required. 7 days of full access, no strings attached.</p>
       <form id="signupForm" onsubmit="return submitSignupForm(event)">
         <div class="form-row">
           <div class="form-group">
@@ -1732,8 +1732,62 @@
     </div>
   </div>
 
-  <!-- ─── Scripts ─────────────────────────────────────────────── -->
+  <!-- ─── Lenis Smooth Scroll ──────────────────────────────────── -->
+  <script src="https://unpkg.com/lenis@1.3.25/dist/lenis.min.js"></script>
   <script>
+    // Respect reduced-motion preference
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!prefersReducedMotion) {
+      document.addEventListener('DOMContentLoaded', () => {
+        const lenis = new Lenis({
+          autoRaf: true,
+          anchors: true,
+          duration: 1.4,
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+          smoothWheel: true,
+          wheelMultiplier: 0.85,
+          touchMultiplier: 0.75,
+        });
+
+        // Sync navbar scroll detection with Lenis
+        const navbar = document.getElementById('navbar');
+        lenis.on('scroll', (e) => {
+          navbar.classList.toggle('scrolled', e.animatedScroll > 20);
+        });
+
+        // Expose lenis instance globally for any custom scrollTo calls
+        window.__lenis = lenis;
+      });
+    }
+  </script>
+
+  <!-- ─── Motion Effects Library ────────────────────────── -->
+  <script src="/js/motion.js"></script>
+  <script>
+    // ─── Skiper UI-inspired Motion Effects ────────────────────────
+    (function() {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      document.addEventListener('DOMContentLoaded', function() {
+        // Magnetic buttons on primary CTAs
+        MotionEffects.magnetic('.cta-actions .btn-primary, .hero-actions .btn-primary', {
+          strength: 0.2,
+          transition: 250
+        });
+
+        // Card tilt on feature cards, interface cards, pricing cards
+        MotionEffects.tilt('.feature-card', { maxTilt: 4, perspective: 900, scale: 1.005 });
+        MotionEffects.tilt('.interface-card', { maxTilt: 4, perspective: 900, scale: 1.005 });
+        MotionEffects.tilt('.pricing-card', { maxTilt: 3, perspective: 1000, scale: 1.005 });
+
+        // Animated counters for hero stats
+        MotionEffects.counters();
+
+        // Spring reveal on feature cards that already use reveal-spring
+        // (landing page's own .reveal system handles most scroll animations)
+      });
+    })();
+
     // ─── Toast Notification System ────────────────────────────────
     function showToast(icon, message, type) {
       type = type || 'success';
@@ -1915,18 +1969,32 @@
       }
     })();
 
-    // ─── Navbar scroll effect ───────────────────────────────────────
-    const navbar = document.getElementById('navbar');
-    window.addEventListener('scroll', () => {
-      navbar.classList.toggle('scrolled', window.scrollY > 20);
-    });
-
     // ─── FAQ accordion ──────────────────────────────────────────────
     document.querySelectorAll('.faq-question').forEach((q) => {
       q.addEventListener('click', () => {
         q.parentElement.classList.toggle('open');
       });
     });
+
+    // ─── Newsletter Form ─────────────────────────────────────────
+    function submitNewsletter(e, form) {
+      e.preventDefault();
+      const email = form.querySelector('input').value;
+      fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+        .then((r) => r.json())
+        .then(() => {
+          showToast('🙌', 'Thanks for subscribing! We\'ll keep you posted.');
+          form.querySelector('input').value = '';
+        })
+        .catch(() => {
+          showToast('⚠️', 'Something went wrong. Please try again.', 'info');
+        });
+      return false;
+    }
 
     // ─── Cookie consent banner ──────────────────────────────────────
     (function() {

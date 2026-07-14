@@ -9,13 +9,43 @@
   <link rel="stylesheet" href="/css/waiter.css">
 </head>
 <body>
+  <!-- ─── Category Drawer Overlay ─── -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+
+  <!-- ─── Category Drawer (slide-in from left) ─── -->
+  <nav class="category-drawer" id="categoryDrawer">
+    <div class="drawer-header">
+      <span class="drawer-title">📂 Menu</span>
+      <button class="drawer-close" id="drawerClose" title="Close">✕</button>
+    </div>
+    <div class="drawer-tabs" id="drawerTabs">
+      <button class="drawer-tab active" data-category="starters">
+        <span class="drawer-tab-icon">🥟</span>
+        <span class="drawer-tab-label">Starters</span>
+      </button>
+      <button class="drawer-tab" data-category="mains">
+        <span class="drawer-tab-icon">🍛</span>
+        <span class="drawer-tab-label">Mains</span>
+      </button>
+      <button class="drawer-tab" data-category="desserts">
+        <span class="drawer-tab-icon">🍨</span>
+        <span class="drawer-tab-label">Desserts</span>
+      </button>
+      <button class="drawer-tab" data-category="drinks">
+        <span class="drawer-tab-icon">🥤</span>
+        <span class="drawer-tab-label">Drinks</span>
+      </button>
+    </div>
+  </nav>
+
   <!-- ─── Header ─── -->
   <header class="waiter-header">
     <div class="header-left">
+      <button class="hamburger-btn" id="hamburgerBtn" title="Menu Categories">☰</button>
       <span class="table-badge" id="tableBadge">Table 01</span>
     </div>
     <div class="header-center">
-      <span class="header-title">📋 Order Pad</span>
+      <span class="header-category-label" id="headerCategoryLabel">🥟 Starters</span>
     </div>
     <div class="header-right">
       <button class="orders-toggle" id="ordersToggle" title="View Orders">📋 Orders</button>
@@ -26,14 +56,6 @@
   <div class="waiter-layout">
     <!-- ─── Main Content (Menu) ─── -->
     <div class="waiter-main">
-      <!-- ─── Category Tabs ─── -->
-      <nav class="category-tabs" id="categoryTabs">
-        <button class="tab active" data-category="starters">🥟 Starters</button>
-        <button class="tab" data-category="mains">🍛 Mains</button>
-        <button class="tab" data-category="desserts">🍨 Desserts</button>
-        <button class="tab" data-category="drinks">🥤 Drinks</button>
-      </nav>
-
       <!-- ─── Menu Grid ─── -->
       <section class="menu-grid-container">
         <div class="menu-grid" id="menuGrid"></div>

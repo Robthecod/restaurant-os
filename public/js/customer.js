@@ -137,23 +137,28 @@
     } catch (err) {
       console.error('Failed to fetch menu:', err);
       dom.menuLoading.innerHTML = `
-        <div class="spinner"></div>
-        <div>Couldn't load the menu. Make sure you're connected to the restaurant's network.</div>
+        <div class="customer-error-state">
+          <span class="error-icon">📡</span>
+          <div class="error-text">Couldn't load the menu.</div>
+          <div class="error-sub">Make sure you're connected to the restaurant's network.</div>
+          <button class="error-retry" onclick="window.location.reload()">Try Again</button>
+        </div>
       `;
       setTimeout(fetchMenu, 3000);
     }
   }
 
-  // ─── Render Categories ───────────────────────────────────────────────
   function renderCategories() {
     if (!state.menu) return;
     const cats = Object.keys(state.menu.categories);
+    const catIcons = { starters: '🥟', mains: '🍛', desserts: '🍨', drinks: '🥤' };
     dom.categories.innerHTML = cats
       .map(
         (cat) => `
         <button class="customer-cat-tab ${cat === state.currentCategory ? 'active' : ''}"
                 data-category="${cat}">
-          ${capitalize(cat)}
+          <span class="cat-icon">${catIcons[cat] || '🍽️'}</span>
+          <span class="cat-label">${capitalize(cat)}</span>
         </button>
       `
       )
@@ -169,13 +174,16 @@
 
     dom.menuGrid.innerHTML = items
       .map(
-        (item) => `
+        (item, idx) => `
         <div class="customer-menu-item ${item.available ? '' : 'unavailable'}"
              data-id="${item.id}"
-             data-category="${state.currentCategory}">
+             data-category="${state.currentCategory}"
+             style="animation-delay: ${idx * 35}ms">
           <span class="item-available"></span>
+          <span class="item-emoji">${getItemEmoji(item.name)}</span>
           <span class="item-name">${item.name}</span>
           <span class="item-price">₹${item.price.toFixed(2)}</span>
+          <span class="item-tap-hint">Tap to customize</span>
         </div>
       `
       )
@@ -218,6 +226,11 @@
     dom.cartCount.textContent = `${count} item${count !== 1 ? 's' : ''}`;
     dom.cartTotal.textContent = `₹${total.toFixed(2)}`;
     dom.placeOrder.disabled = count === 0;
+
+    // Bounce animation on count change
+    dom.cartCount.classList.remove('cart-bounce');
+    void dom.cartCount.offsetWidth; // force reflow
+    dom.cartCount.classList.add('cart-bounce');
   }
 
   // ─── Place Order ────────────────────────────────────────────────────
@@ -258,7 +271,7 @@
       state.cart = [];
       updateCartUI();
 
-      showToast(`✅ Order #${order.id} placed! The kitchen has it.`, 'success');
+      showToast(`<span class="toast-icon">🎉</span> <span>Order #${order.id} placed! The kitchen has it.</span>`, 'success');
 
       // After 3 seconds, offer to track the order
       setTimeout(() => {
@@ -266,7 +279,7 @@
       }, 3000);
     } catch (err) {
       console.error('Place order error:', err);
-      showToast('❌ Could not place order. Try again!', 'error');
+      showToast('<span class="toast-icon">❌</span> <span>Could not place order. Try again!</span>', 'error');
     } finally {
       dom.placeOrder.disabled = false;
       dom.placeOrder.textContent = '🛒 Place Order';
@@ -376,29 +389,96 @@
   }
 
   function getItemEmoji(name) {
-    const emojiMap = {
-      'spring roll': '🥟',
-      'chicken wing': '🍗',
-      'garlic bread': '🍞',
-      'soup': '🍜',
-      'biryani': '🍚',
-      'salmon': '🐟',
-      'beef steak': '🥩',
-      'steak': '🥩',
-      'pasta': '🍝',
-      'butter chicken': '🍛',
-      'fried rice': '🍚',
-      'coca cola': '🥤',
-      'orange juice': '🍊',
-      'lemonade': '🍋',
-      'mango lassi': '🥛',
-      'water': '💧',
-      'paneer': '🧀',
-    };
     const lower = name.toLowerCase();
-    for (const [key, emoji] of Object.entries(emojiMap)) {
+
+    // Multi-word specific matches (checked first to avoid generic false matches)
+    const specific = {
+      'paneer butter masala': '🍛',
+      'paneer tikka masala': '🍛',
+      'paneer tikka': '🧀',
+      'chilli paneer': '🧀',
+      'palak paneer': '🧀',
+      'shahi paneer': '🧀',
+      'dahi ke kabab': '🥙',
+      'hara bhara kabab': '🥙',
+      'veg seekh kabab': '🥙',
+      'veggie seekh kabab': '🥙',
+      'masala spring rolls': '🥟',
+      'spinach & corn soup': '🍜',
+      'tomato basil soup': '🍜',
+      'cheese chilli toast': '🧀',
+      'crispy corn': '🌽',
+      'sweet potato fries': '🍟',
+      'garlic bread': '🍞',
+      'nacho supreme': '🧀',
+      'kadai vegetable': '🍲',
+      'mix veg curry': '🍲',
+      'malai kofta': '🧆',
+      'gulab jamun': '🍡',
+      'gajar ka halwa': '🍮',
+      'brownie with ice cream': '🍫',
+      'mango mousse': '🍮',
+      'fresh fruit bowl': '🍎',
+      'ice cream': '🍦',
+      'sizzling brownie': '🍫',
+      'masala chai': '🫖',
+      'cold coffee': '☕',
+      'mango lassi': '🥭',
+      'fresh lime soda': '🍋',
+      'fruit smoothie': '🥤',
+      'coconut water': '🥥',
+      'soft drinks': '🥤',
+      'mint lemonade': '🍋',
+      'iced tea': '🧋',
+      'hot chocolate': '☕',
+      'fresh juice': '🧃',
+    };
+
+    for (const [key, emoji] of Object.entries(specific)) {
       if (lower.includes(key)) return emoji;
     }
+
+    // Generic keyword matches (fallback)
+    const generic = {
+      'noodles': '🍜',
+      'pasta': '🍝',
+      'biryani': '🍚',
+      'pulao': '🍚',
+      'fried rice': '🍚',
+      'rice': '🍚',
+      'dal': '🥣',
+      'soup': '🍜',
+      'spring roll': '🥟',
+      'manchurian': '🥟',
+      'mushroom': '🍄',
+      'toast': '🍞',
+      'paratha': '🫓',
+      'naan': '🫓',
+      'thali': '🍱',
+      'sizzler': '🔥',
+      'kabab': '🥙',
+      'kebab': '🥙',
+      'halwa': '🍮',
+      'brownie': '🍫',
+      'mousse': '🍮',
+      'tiramisu': '☕',
+      'rasmalai': '🥛',
+      'cheesecake': '🍰',
+      'kulfi': '🍦',
+      'phirni': '🍮',
+      'chai': '🫖',
+      'coffee': '☕',
+      'lassi': '🥤',
+      'buttermilk': '🥛',
+      'lemonade': '🍋',
+      'juice': '🧃',
+      'paneer': '🧀',
+    };
+
+    for (const [key, emoji] of Object.entries(generic)) {
+      if (lower.includes(key)) return emoji;
+    }
+
     return '🍽️';
   }
 
@@ -406,11 +486,10 @@
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `customer-toast ${type}`;
-    toast.textContent = message;
+    toast.innerHTML = message;
     dom.toastContainer.appendChild(toast);
     setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transition = 'opacity 0.3s';
+      toast.classList.add('removing');
       setTimeout(() => toast.remove(), 300);
     }, 3500);
   }
@@ -473,7 +552,7 @@
       const modifiers = dom.modalModifier.value.trim();
       addToCart(state.selectedItem, quantity, modifiers);
       closeItemModal();
-      showToast(`✅ Added ${quantity}x ${state.selectedItem.name}`, 'success');
+      showToast(`<span class="toast-icon">✅</span> <span>Added ${quantity}x ${state.selectedItem.name}</span>`, 'success');
     });
 
     // Modal Skip
@@ -482,7 +561,7 @@
       const quantity = parseInt(dom.modalQtyValue.textContent);
       addToCart(state.selectedItem, quantity, '');
       closeItemModal();
-      showToast(`✅ Added ${quantity}x ${state.selectedItem.name}`, 'success');
+      showToast(`<span class="toast-icon">✅</span> <span>Added ${quantity}x ${state.selectedItem.name}</span>`, 'success');
     });
 
     // Close modal on overlay click

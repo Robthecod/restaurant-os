@@ -7,11 +7,20 @@
     "start": "node server.js",
     "dev": "node server.js"
   },
-  "keywords": ["restaurant", "pos", "kds", "kitchen-display", "socket.io", "real-time", "qr-ordering"],
+  "keywords": [
+    "restaurant",
+    "pos",
+    "kds",
+    "kitchen-display",
+    "socket.io",
+    "real-time",
+    "qr-ordering"
+  ],
   "license": "MIT",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.18.2",
-    "socket.io": "^4.7.2",
-    "cors": "^2.8.5"
+    "nodemailer": "^9.0.3",
+    "socket.io": "^4.7.2"
   }
 }

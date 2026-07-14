@@ -241,6 +241,70 @@ label {
   to { transform: translateX(100%); opacity: 0; }
 }
 
+/* ─── Spring & Motion Easing ────────────────────────────────────────── */
+:root {
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
+}
+
+/* ─── Glassmorphism ─────────────────────────────────────────────────── */
+.glass {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* ─── Hover Lift ────────────────────────────────────────────────────── */
+.hover-lift {
+  transition: transform 0.3s var(--ease-spring), box-shadow 0.3s var(--ease-spring);
+  will-change: transform;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+}
+
+/* ─── Scroll Reveal (Spring) ────────────────────────────────────────── */
+.reveal-spring {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s var(--ease-spring), transform 0.6s var(--ease-spring);
+}
+.reveal-spring.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Tilt Card Wrapper ─────────────────────────────────────────────── */
+.tilt-wrapper {
+  transform-style: preserve-3d;
+  perspective: 800px;
+}
+.tilt-content {
+  transition: transform 0.2s var(--ease-spring);
+}
+
+/* ─── Pulse Glow ────────────────────────────────────────────────────── */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(247,151,30,0.12); }
+  50% { box-shadow: 0 0 18px rgba(247,151,30,0.25); }
+}
+.glow-pulse {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+/* ─── Float Animation ───────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.float {
+  animation: float 4s var(--ease-spring) infinite;
+}
+
 /* ─── Utility ────────────────────────────────────────────────────────── */
 .text-muted { color: var(--text-muted); }
 .text-secondary { color: var(--text-secondary); }
