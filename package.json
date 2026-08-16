@@ -1,12 +1,18 @@
 {
   "name": "chauka",
   "version": "1.0.0",
-  "description": "Chauka — Real-Time Restaurant Engine. Waiter Pad, Kitchen Display, Manager Panel & Customer QR ordering.",
-  "main": "server.js",
+  "description": "Chauka — Real-Time Restaurant Engine. Two separate projects: restaurant-public (marketing site) and restaurant-local (self-hosted restaurant system).",
+  "private": true,
+  "workspaces": [
+    "restaurant-public",
+    "restaurant-local"
+  ],
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "start:license": "node licensing-server.js"
+    "start": "npm run start:local",
+    "start:local": "npm run start --workspace=restaurant-local",
+    "start:public": "npm run start --workspace=restaurant-public",
+    "start:license": "npm run start:license --workspace=restaurant-local",
+    "dev": "npm run start:local"
   },
   "keywords": [
     "restaurant",
@@ -17,11 +23,5 @@
     "real-time",
     "qr-ordering"
   ],
-  "license": "UNLICENSED",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "nodemailer": "^9.0.3",
-    "socket.io": "^4.7.2"
-  }
+  "license": "UNLICENSED"
 }

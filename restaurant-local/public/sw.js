@@ -1,9 +1,11 @@
-const CACHE_NAME = 'chauka-v4';
+const CACHE_NAME = 'chauka-local-v1';
 
-// Assets to cache on install
+// Assets to cache on install (restaurant app screens + shared assets)
 const PRECACHE = [
   '/',
-  '/index.html',
+  '/css/style.css',
+  '/js/motion.js',
+  '/manifest.json',
   '/app/hub/',
   '/app/hub/hub.css',
   '/app/hub/hub.js',
@@ -21,8 +23,6 @@ const PRECACHE = [
   '/app/customer/customer.js',
   '/app/js/socket-client.js',
   '/app/js/license-client.js',
-  '/css/style.css',
-  '/manifest.json',
 ];
 
 // Install event — cache core assets

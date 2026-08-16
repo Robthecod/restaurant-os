@@ -39,17 +39,13 @@ const PORT = process.env.PORT || 3000;
 const DATA_DIR = path.join(__dirname, 'data');
 const MENU_FILE = path.join(DATA_DIR, 'menu.json');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
-const LEADS_FILE = path.join(DATA_DIR, 'leads.json');
 const KITCHEN_FILE = path.join(DATA_DIR, 'kitchen.json');
 const LICENSE_FILE = path.join(DATA_DIR, 'license.json');
 
-// Public marketing site (landing page + lead forms) vs the local restaurant
-// app (waiter/kitchen/manager/customer/hub). Set PUBLIC_ONLY=true on the
-// public marketing deployment — the app pages and app APIs are then never
-// served, so the restaurant system stays off the public internet.
+// Shared static assets for the app screens (style.css, motion.js, manifest,
+// sw.js, icons) — served at root. The restaurant screens live in /app/.
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const APP_DIR = path.join(__dirname, 'app');
-const PUBLIC_ONLY = process.env.PUBLIC_ONLY === 'true';
 
 // ─── File System Helpers ────────────────────────────────────────────────
 
@@ -176,7 +172,6 @@ initDataFile(MENU_FILE, {
 });
 
 initDataFile(ORDERS_FILE, { nextId: 1, orders: [] });
-initDataFile(LEADS_FILE, { nextDemoId: 1, nextSignupId: 1, demos: [], signups: [] });
 initDataFile(KITCHEN_FILE, { nextIngredientId: 1, nextReturnId: 1, nextHelpId: 1, ingredientRequests: [], returnedDishes: [], helpReports: [] });
 initDataFile(LICENSE_FILE, { installId: null, lastVerifiedAt: null, lastCheckedAt: null, locked: false });
 
@@ -389,106 +384,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Redirect old /landing.html to /
-app.get('/landing.html', (req, res) => {
-  res.redirect(301, '/');
-});
-
-// Serve static files from /public (landing page, terms, privacy, shared assets)
+// Serve shared static assets (style.css, motion.js, manifest, sw, icons)
 app.use(express.static(PUBLIC_DIR));
 
-// ─── LEAD GENERATION API ─────────────────────────────────────────────
-
-// POST /api/demo — Book a demo
-app.post('/api/demo', (req, res) => {
-  try {
-    const data = readJSON(LEADS_FILE);
-    const { name, email, restaurant, phone, date, message } = req.body;
-
-    if (!name || !email || !restaurant || !date) {
-      return res.status(400).json({ error: 'name, email, restaurant, and date are required' });
-    }
-
-    const demo = {
-      id: data.nextDemoId,
-      name,
-      email,
-      restaurant,
-      phone: phone || '',
-      preferredDate: date,
-      message: message || '',
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-
-    data.nextDemoId++;
-    data.demos.push(demo);
-    writeJSON(LEADS_FILE, data);
-
-    // Notify via socket.io
-    io.emit('new_demo_booking', demo);
-
-    console.log(`  Demo booking #${demo.id}: ${name} — ${restaurant} (${email})`);
-    if (demo.phone) console.log('     Phone: ' + demo.phone);
-    if (demo.message) console.log('     Note: ' + demo.message);
-
-    res.status(201).json({ success: true, id: demo.id });
-  } catch (err) {
-    console.error('Demo booking error:', err);
-    res.status(500).json({ error: 'Failed to book demo' });
-  }
-});
-
-// POST /api/signup — Start free trial signup
-app.post('/api/signup', (req, res) => {
-  try {
-    const data = readJSON(LEADS_FILE);
-    const { name, email, restaurant, phone, teamSize } = req.body;
-
-    if (!name || !email || !restaurant) {
-      return res.status(400).json({ error: 'name, email, and restaurant are required' });
-    }
-
-    const signup = {
-      id: data.nextSignupId,
-      name,
-      email,
-      restaurant,
-      phone: phone || '',
-      teamSize: teamSize || '',
-      status: 'active',
-      createdAt: new Date().toISOString(),
-    };
-
-    data.nextSignupId++;
-    data.signups.push(signup);
-    writeJSON(LEADS_FILE, data);
-
-    // Notify via socket.io
-    io.emit('new_signup', signup);
-
-    console.log(`  Free trial signup #${signup.id}: ${name} — ${restaurant} (${email})`);
-    if (signup.phone) console.log('     Phone: ' + signup.phone);
-    if (signup.teamSize) console.log('     Team: ' + signup.teamSize);
-
-    res.status(201).json({ success: true, id: signup.id });
-  } catch (err) {
-    console.error('Signup error:', err);
-    res.status(500).json({ error: 'Failed to sign up' });
-  }
-});
-
-// ─── PUBLIC-ONLY GATE ────────────────────────────────────────────────────
-// On the marketing deployment, everything from here on is restaurant-app
-// functionality — block all /api calls. (/app page URLs naturally fall
-// through to the 404 handler since the app folder is never mounted.)
-app.use((req, res, next) => {
-  if (!PUBLIC_ONLY) return next();
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'Not found' });
-  }
-  next();
-});
+// Health check (Render uses this)
+app.get('/health', (req, res) => res.json({ ok: true, service: 'chauka-local' }));
 
 // ─── LICENSE API ─────────────────────────────────────────────────────────
 // (Placed after lead-gen routes so demo/signup stay open, and before the
@@ -1425,7 +1325,6 @@ io.on('connection', (socket) => {
 
   // Allow kitchen to update order status via WebSocket
   socket.on('update_order_status', (data) => {
-    if (PUBLIC_ONLY) return; // app functionality — never on the public deployment
     // Refuse writes while the license is locked (and flip every screen to the lock screen)
     if (license.enabled && license.locked) {
       io.emit('license_locked', { reason: license.lastReason });
@@ -1452,23 +1351,20 @@ io.on('connection', (socket) => {
   });
 });
 
-// ─── Restaurant app pages (local installs only) ─────────────────────────
-// Mounted at /app/... — never mounted when PUBLIC_ONLY=true, so the app is
-// unreachable on the public marketing deployment.
-if (!PUBLIC_ONLY) {
-  app.use('/app', express.static(APP_DIR));
+// ─── Restaurant app pages ───────────────────────────────────────────────
+// Mounted at /app/... — this is the restaurant system's own server.
+app.use('/app', express.static(APP_DIR));
 
-  // Redirect legacy flat URLs (e.g. /app/waiter.html) to the new per-page
-  // folders (/app/waiter/) so already-printed QR codes keep working.
-  app.get('/app/:page.html', (req, res) => {
-    const page = req.params.page;
-    if (!['hub', 'waiter', 'kitchen', 'manager', 'customer'].includes(page)) {
-      return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
-    }
-    const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
-    res.redirect(301, '/app/' + page + '/' + qs);
-  });
-}
+// Redirect legacy flat URLs (e.g. /app/waiter.html) to the new per-page
+// folders (/app/waiter/) so already-printed QR codes keep working.
+app.get('/app/:page.html', (req, res) => {
+  const page = req.params.page;
+  if (!['hub', 'waiter', 'kitchen', 'manager', 'customer'].includes(page)) {
+    return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+  }
+  const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  res.redirect(301, '/app/' + page + '/' + qs);
+});
 
 // ─── 404 handler (after all API routes) ────────────────────────────────
 app.use((req, res) => {
@@ -1499,15 +1395,10 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('     Running on http://0.0.0.0:' + PORT);
   console.log('  ================================================');
   console.log('');
-  console.log('  LAN Access:     http://' + lanIP + ':' + PORT);
-  if (PUBLIC_ONLY) {
-    console.log('  Mode:           PUBLIC-ONLY (landing page only, app disabled)');
-  } else {
-    console.log('  Hub:            http://localhost:' + PORT + '/app/hub/');
-    console.log('  Waiter Pad:     http://localhost:' + PORT + '/app/waiter/?table=01');
-    console.log('  Kitchen Display: http://localhost:' + PORT + '/app/kitchen/');
-    console.log('  Manager Panel:   http://localhost:' + PORT + '/app/manager/');
-    console.log('  Customer Menu:   http://localhost:' + PORT + '/app/customer/?table=01');
-  }
+  console.log('  LAN Access:     http://' + lanIP + ':' + PORT);  console.log('  Hub:            http://localhost:' + PORT + '/app/hub/');
+  console.log('  Waiter Pad:     http://localhost:' + PORT + '/app/waiter/?table=01');
+  console.log('  Kitchen Display: http://localhost:' + PORT + '/app/kitchen/');
+  console.log('  Manager Panel:   http://localhost:' + PORT + '/app/manager/');
+  console.log('  Customer Menu:   http://localhost:' + PORT + '/app/customer/?table=01');
   console.log('');
 });

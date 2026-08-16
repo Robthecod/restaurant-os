@@ -1,9 +1,14 @@
 # Chauka — Render Deployment Configuration
 # https://render.com/docs/infrastructure-as-code
+#
+# Two separate projects:
+#   restaurant-public  → the public marketing site (landing + lead forms)
+#   restaurant-local   → the self-hosted restaurant system (license-gated)
 
 services:
   - type: web
-    name: chauka
+    name: chauka-public
+    rootDir: restaurant-public
     env: node
     plan: free
     buildCommand: npm install
@@ -12,9 +17,23 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 18
-      # Public marketing deployment — serves only the landing page + lead
-      # forms. The restaurant app (/app/*) and its APIs stay disabled here.
-      # Local restaurant installs run without this variable.
-      - key: PUBLIC_ONLY
-        value: "true"
+    autoDeploy: true
+
+  - type: web
+    name: chauka-local
+    rootDir: restaurant-local
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      # Point at your licensing server; leave LICENSE_KEY unset for your own
+      # managed cloud deploy, or set it to license a customer install.
+      #   - key: LICENSE_SERVER_URL
+      #     value: https://licenses.yourdomain.com
+      #   - key: LICENSE_KEY
+      #     value: CHK-XXXX-XXXX-XXXX-XXXX
     autoDeploy: true
