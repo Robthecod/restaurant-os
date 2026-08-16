@@ -244,6 +244,7 @@ function loyaltyCustomerPublic(c) {
     totalSpent: c.totalSpent,
     visits: c.visits,
     birthdaySet: !!c.birthday,
+    whatsappOptIn: !!c.whatsappOptIn,
   };
 }
 
@@ -472,6 +473,10 @@ function applyLoyaltyRedemption(data, order, body) {
 //                        of once daily — use for snappier lockdown enforcement
 //                        (e.g. 1 = checks hourly). Default: unset (daily).
 
+// Restaurant's WhatsApp number (with country code, digits only, e.g. '919876543210')
+// Used for free wa.me deep links on the customer screen and in the manager panel.
+const WHATSAPP_NUMBER = (process.env.WHATSAPP_NUMBER || '').replace(/[^\d]/g, '');
+
 const LICENSE_KEY = process.env.LICENSE_KEY || '';
 const LICENSE_SERVER_URL = (process.env.LICENSE_SERVER_URL || '').replace(/\/+$/, '');
 const LICENSE_GRACE_DAYS = Math.max(0, parseInt(process.env.LICENSE_GRACE_DAYS || '3', 10) || 0);
@@ -656,7 +661,11 @@ app.use(express.json());
 
 // GET /api/loyalty/settings — public earning/redemption rules
 app.get('/api/loyalty/settings', (req, res) => {
-  res.json(readLoyalty().settings);
+  const settings = readLoyalty().settings;
+  res.json({
+    ...settings,
+    whatsappNumber: WHATSAPP_NUMBER || null, // restaurant's WhatsApp number for wa.me links
+  });
 });
 
 // POST /api/loyalty/register — create or update a customer profile
@@ -673,6 +682,7 @@ app.post('/api/loyalty/register', (req, res) => {
         phone,
         name: (req.body.name || '').trim(),
         birthday: (req.body.birthday || '').trim(),
+        whatsappOptIn: !!req.body.whatsappOptIn,
         points: 0,
         totalSpent: 0,
         visits: 0,
@@ -686,6 +696,7 @@ app.post('/api/loyalty/register', (req, res) => {
     } else {
       if (req.body.name) customer.name = String(req.body.name).trim();
       if (req.body.birthday) customer.birthday = String(req.body.birthday).trim();
+      if (typeof req.body.whatsappOptIn === 'boolean') customer.whatsappOptIn = req.body.whatsappOptIn;
     }
 
     writeLoyalty(loyalty);

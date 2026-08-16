@@ -93,6 +93,7 @@ Open `http://localhost:3100/` and create a key for the restaurant there (you'll 
 | `LICENSE_GRACE_DAYS` | Offline grace period (default `3`). | `3` |
 | `LICENSE_CHECK_HOUR` | Daily verification hour, 0-23 (default `6`). | `6` |
 | `LICENSE_CHECK_INTERVAL_HOURS` | Optional: verify every N hours instead of once daily — for snappier lockdown enforcement (e.g. `1` = checks hourly). | `1` |
+| `WHATSAPP_NUMBER` | Restaurant's WhatsApp number (digits + country code) — enables free `wa.me` links, opt-in collection, and the manager's broadcast helper. **Unset = WhatsApp features hidden.** | `919876543210` |
 
 ```bash
 # From restaurant-local/

@@ -72,6 +72,7 @@
 
     // Loyalty
     loyaltyPhone: $('#loyaltyPhone'),
+    loyaltyWhatsapp: $('#loyaltyWhatsapp'),
     loyaltyCheck: $('#loyaltyCheck'),
     loyaltyRegister: $('#loyaltyRegister'),
     loyaltyName: $('#loyaltyName'),
@@ -340,7 +341,12 @@
       const res = await fetch('/api/loyalty/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: state.loyaltyPhone, name, birthday }),
+        body: JSON.stringify({
+          phone: state.loyaltyPhone,
+          name,
+          birthday,
+          whatsappOptIn: dom.loyaltyWhatsapp.checked,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not register');
@@ -359,6 +365,12 @@
     const c = state.loyalty;
     const value = Math.floor(c.points * (state.loyaltySettings?.discountValuePct || 0.5));
     const medal = c.tier === 'gold' ? '🥇' : c.tier === 'platinum' ? '💎' : '🥈';
+    const wa = state.loyaltySettings?.whatsappNumber;
+    const waBtn = wa
+      ? `<a class="loyalty-wa-link" target="_blank" rel="noopener" href="https://wa.me/${wa}?text=${encodeURIComponent(
+          `Hi! I have ${c.points} pts at Chauka — please keep me updated on WhatsApp 🎉`
+        )}">📲 Get my points on WhatsApp</a>`
+      : '';
     dom.loyaltyStatus.innerHTML = `
       <div class="loyalty-banner ${c.tier}">
         <div class="loyalty-banner-top">
@@ -366,6 +378,7 @@
           <span class="loyalty-tier">${medal} ${escapeHtml(c.tier)}</span>
         </div>
         <div class="loyalty-points"><b>${c.points}</b> pts <span class="loyalty-value">≈ ₹${value} off</span></div>
+        ${waBtn}
       </div>`;
     dom.loyaltyStatus.style.display = 'block';
     dom.redeemBtn.style.display = 'inline-flex';

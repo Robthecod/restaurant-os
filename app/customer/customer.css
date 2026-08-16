@@ -1145,6 +1145,24 @@ body.customer-page {
   border-color: var(--c-primary);
   box-shadow: 0 0 0 3px var(--c-primary-glow);
 }
+.loyalty-wa-optin {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  line-height: 1.4;
+  -webkit-tap-highlight-color: transparent;
+}
+.loyalty-wa-optin input {
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  accent-color: #25d366;
+  flex-shrink: 0;
+}
 
 .loyalty-status { margin-top: 10px; }
 .loyalty-banner {
@@ -1186,6 +1204,28 @@ body.customer-page {
 }
 .loyalty-points b { font-size: 1.15rem; color: var(--c-primary); }
 .loyalty-value { font-size: 0.78rem; color: var(--c-primary-dark); }
+.loyalty-wa-link {
+  margin-top: 8px;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #25d366;
+  color: #fff !important;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: 100px;
+  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+  transition: transform 150ms var(--c-bounce), box-shadow 200ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.loyalty-wa-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4);
+}
+.loyalty-wa-link:active { transform: scale(0.96); }
 
 /* ─── Redeem Button (cart bar) ────────────────────────────────── */
 .customer-redeem-btn {

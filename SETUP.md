@@ -59,8 +59,25 @@ LICENSE_SERVER_URL=https://licenses.yourdomain.com
 | `LICENSE_GRACE_DAYS` | Offline grace period (default `3`) | `3` |
 | `LICENSE_CHECK_HOUR` | Daily check time, 0–23 (default `6`) | `6` |
 | `LICENSE_CHECK_INTERVAL_HOURS` | Check every N hours instead of daily (snappier lockdown) | `1` |
+| `WHATSAPP_NUMBER` | Restaurant's WhatsApp number (digits only, with country code) — enables WhatsApp links | `919876543210` |
 
 The client does **not** need the admin token — that only lives on your licensing server.
+
+### 4b. WhatsApp (optional, free)
+
+To let customers message the restaurant on WhatsApp and to make manual offers easy:
+
+```
+WHATSAPP_NUMBER=919876543210
+```
+
+Digits only, with country code, no `+` or spaces. Once set:
+
+- The customer ordering screen shows a **📲 Get my points on WhatsApp** button (opens a chat with the restaurant, balance pre-filled)
+- The customer registration form includes a **WhatsApp opt-in** checkbox — only customers who tick it show up in your broadcast list
+- The manager's **Loyalty** tab shows a WhatsApp card: how many customers opted in, a **Copy numbers** button for pasting into a WhatsApp broadcast, and a one-tap **Message** link per customer (balance pre-filled)
+
+This is the **free** path — it uses plain `wa.me` links, no API, no per-message fees. Promos are sent manually from the WhatsApp Business app (open the app → **New broadcast** → paste the copied numbers). Automated sending (points messages on delivery, one-click broadcasts) requires the WhatsApp Business API, which charges roughly ₹0.4–₹1.5 per message in India — ask the vendor if you want that enabled.
 
 ### 5. Install and start
 

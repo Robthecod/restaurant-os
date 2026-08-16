@@ -62,6 +62,7 @@
     loyaltyTiers: $('#loyaltyTiers'),
     loyaltyCustomers: $('#loyaltyCustomers'),
     loyaltyLedger: $('#loyaltyLedger'),
+    waCard: $('#waCard'),
     notifBell: $('#notifBell'),
     notifBadge: $('#notifBadge'),
     notifContainer: $('#notifContainer'),
@@ -432,8 +433,10 @@
       const settings = await settingsRes.json();
       const customers = await customersRes.json();
       const ledger = await ledgerRes.json();
+      window.__waNumber = settings.whatsappNumber || null;
       fillLoyaltyRules(settings);
       renderLoyaltyTiers(settings);
+      renderWaCard(settings, customers);
       renderLoyaltyCustomers(customers);
       renderLoyaltyLedger(ledger);
       dom.loyaltyAdminLoading.style.display = 'none';
@@ -470,7 +473,34 @@
     `;
   }
 
+  function renderWaCard(settings, customers) {
+    const waNumber = settings.whatsappNumber;
+    if (!waNumber) {
+      dom.waCard.innerHTML =
+        '<div class="loyalty-empty">Set <code>WHATSAPP_NUMBER</code> in <code>.env</code> (digits with country code, e.g. <code>919876543210</code>) to enable WhatsApp links and broadcasts.</div>';
+      return;
+    }
+    const opted = customers.filter((c) => c.whatsappOptIn);
+    const list = opted.map((c) => `91${c.phone}`);
+    dom.waCard.innerHTML = `
+      <div class="wa-card-stats">
+        <span class="wa-card-count"><b>${opted.length}</b> of ${customers.length} customers opted in</span>
+        <button class="btn btn-primary wa-copy-btn" id="waCopyNumbers">Copy ${opted.length} numbers</button>
+      </div>
+      <div class="wa-card-hint">Paste the numbers into your WhatsApp Business app → <b>New broadcast</b> to send an offer to everyone.</div>
+      <div class="wa-card-preview" id="waNumberPreview">${escapeHtml(list.join(', '))}</div>
+    `;
+    const copyBtn = dom.waCard.querySelector('#waCopyNumbers');
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard
+        .writeText(list.join(', '))
+        .then(() => showToast('Copied ' + opted.length + ' numbers 📋', 'success'))
+        .catch(() => showToast('Could not copy', 'error'));
+    });
+  }
+
   function renderLoyaltyCustomers(customers) {
+    const waNumber = window.__waNumber || null;
     if (!customers.length) {
       dom.loyaltyCustomers.innerHTML =
         '<div class="loyalty-empty">No customers yet — guests start earning as soon as they enter a phone number.</div>';
@@ -480,17 +510,24 @@
       .slice()
       .sort((a, b) => b.points - a.points)
       .map(
-        (c) => `
+        (c) => {
+          const waLink = waNumber
+            ? `<a class="loyalty-wa-msg" target="_blank" rel="noopener" href="https://wa.me/${waNumber}?text=${encodeURIComponent(
+                `Hi ${c.name || 'there'}! You have ${c.points} pts at Chauka 🥈 — here's a special offer for you!`
+              )}">${c.whatsappOptIn ? '📲 Message' : '📲'}</a>`
+            : '';
+          return `
         <div class="loyalty-customer-row">
           <div class="loyalty-customer-id">
-            <span class="loyalty-customer-name">${escapeHtml(c.name || 'Guest')}</span>
+            <span class="loyalty-customer-name">${escapeHtml(c.name || 'Guest')} ${c.whatsappOptIn ? '<span class="wa-opted-badge" title="Opted in to WhatsApp">WA</span>' : ''}</span>
             <span class="loyalty-customer-phone">+91 ${c.phone}</span>
           </div>
           <span class="loyalty-customer-tier tier-${c.tier}">${medalFor(c.tier)} ${escapeHtml(c.tier)}</span>
           <span class="loyalty-customer-pts"><b>${c.points}</b> pts</span>
           <span class="loyalty-customer-spent">₹${c.totalSpent.toLocaleString('en-IN')}</span>
-          <span class="loyalty-customer-visits">${c.visits} visit${c.visits !== 1 ? 's' : ''}</span>
-        </div>`
+          <span class="loyalty-customer-visits">${c.visits} visit${c.visits !== 1 ? 's' : ''} ${waLink}</span>
+        </div>`;
+        }
       )
       .join('');
     dom.loyaltyCustomers.innerHTML = `
