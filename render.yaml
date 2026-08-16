@@ -1,27 +1,12 @@
 # Chauka — Render Deployment Configuration
 # https://render.com/docs/infrastructure-as-code
 #
-# Two separate projects:
-#   restaurant-public  → the public marketing site (landing + lead forms)
-#   restaurant-local   → the self-hosted restaurant system (license-gated)
+# This repo is the self-hosted restaurant system (license-gated). The
+# public marketing site lives in its own repository.
 
 services:
   - type: web
-    name: chauka-public
-    rootDir: restaurant-public
-    env: node
-    plan: free
-    buildCommand: npm install
-    startCommand: node server.js
-    healthCheckPath: /
-    envVars:
-      - key: NODE_VERSION
-        value: 18
-    autoDeploy: true
-
-  - type: web
-    name: chauka-local
-    rootDir: restaurant-local
+    name: chauka
     env: node
     plan: free
     buildCommand: npm install

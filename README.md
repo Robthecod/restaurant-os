@@ -21,19 +21,13 @@ A lightweight, event-driven restaurant management system that bridges front-of-h
 
 4. Connect your GitHub account and select this repo
 
-5. Render will auto-detect the two services from `render.yaml`:
-   - **chauka-public** → the marketing site (`restaurant-public/`)
-   - **chauka-local** → the restaurant system (`restaurant-local/`)
+5. Render will auto-detect the service from `render.yaml` (build `npm install`, start `node server.js`)
 
-6. Click **"Create Web Service"** for each
+6. Click **"Create Web Service"**
 
-7. Once deployed, you'll get URLs like `https://chauka.onrender.com` (public) and `https://chauka-local.onrender.com` (app)
+7. Once deployed, you'll get a URL like `https://chauka.onrender.com`
 
-8. **Open them** — the public URL shows the landing page; the app URL serves the restaurant system:
-
-   🌐 **Public marketing site** — standalone project under `restaurant-public/`: landing page, demo/signup lead forms, terms & privacy. The restaurant app is never mounted here.
-
-   🏠 **Restaurant app (self-hosted installs)** — standalone project under `restaurant-local/`, license-gated. Each screen has its own folder with its own styles & scripts:
+8. **Open it** — this repo is the license-gated restaurant system (self-hosted installs). Each screen has its own folder with its own styles & scripts:
    - 🏠 **Hub:** `http://your-lan-ip:3000/app/hub/`
    - 📋 **Waiter Pad:** `http://your-lan-ip:3000/app/waiter/?table=01`
    - 🍳 **Kitchen Display:** `http://your-lan-ip:3000/app/kitchen/`
@@ -44,23 +38,17 @@ A lightweight, event-driven restaurant management system that bridges front-of-h
 
 ## 🏠 Local Development
 
-The repo is two separate projects (npm workspaces):
-
-| Project | Folder | Runs | Port |
-|---------|--------|------|------|
-| 🌐 Marketing site | `restaurant-public/` | `npm run start:public` | 8080 |
-| 🏠 Restaurant system | `restaurant-local/` | `npm run start:local` | 3000 |
-| 🔑 License server | `restaurant-local/` | `npm run start:license` | 3100 |
+| Server | Command | Port |
+|--------|---------|------|
+| 🏠 Restaurant system | `npm start` | 3000 |
+| 🔑 License server | `npm run start:license` | 3100 |
 
 ```bash
-# Install all dependencies (root workspace)
+# Install dependencies
 npm install
 
 # Start the restaurant system (hub, waiter, kitchen, manager, customer)
-npm start            # same as npm run start:local
-
-# Optionally start the marketing site too
-npm run start:public
+npm start
 
 # Open in browser
 open http://localhost:3000/app/hub/
@@ -140,64 +128,45 @@ Your own managed cloud deployment doesn't need a key — just leave `LICENSE_KEY
 ## 📁 Project Structure
 
 ```
-├── package.json            # Root workspace orchestrator (npm workspaces)
-├── render.yaml            # Render config — one service per project
-├── LICENSE
-├── CHAUKA_PRODUCT_CONCEPT.md
-├── restaurant-public/     # 🌐 PUBLIC MARKETING SITE — separate project
-│   ├── server.js          # Express static + demo/signup lead APIs
-│   ├── package.json
-│   ├── data/
-│   │   └── leads.json     # Demo & signup leads
-│   ├── index.html         # Marketing landing page
-│   ├── 404.html
-│   ├── terms.html
-│   ├── privacy.html
-│   ├── robots.txt
+├── server.js              # Express + Socket.io server (REST + real-time)
+├── licensing-server.js    # License management API (vendor-side, see 🔐 below)
+├── package.json
+├── render.yaml            # Render deployment config
+├── test/
+│   └── smoke.test.js      # Boots the server & checks screens/APIs (npm test)
+├── .env                   # LICENSE_KEY, LICENSE_SERVER_URL, LICENSE_ADMIN_TOKEN (git-ignored)
+├── public/                # Shared assets served at root
+│   ├── css/style.css
+│   ├── js/motion.js
 │   ├── manifest.json
 │   ├── sw.js              # Service Worker (PWA)
 │   ├── icons/
-│   ├── css/
-│   │   └── style.css
-│   └── js/
-│       └── motion.js
-└── restaurant-local/      # 🏠 RESTAURANT SYSTEM — separate project (license-gated)
-    ├── server.js          # Express + Socket.io server
-    ├── licensing-server.js# License management API (vendor-side, see 🔐 below)
-    ├── package.json
-    ├── .env               # LICENSE_KEY, LICENSE_SERVER_URL, LICENSE_ADMIN_TOKEN (git-ignored)
-    ├── public/            # Shared assets served at root
-    │   ├── css/style.css
-    │   ├── js/motion.js
-    │   ├── manifest.json
-    │   ├── sw.js
-    │   ├── icons/
-    │   └── 404.html
-    ├── app/               # Restaurant screens, mounted at /app/
-    │   ├── hub/
-    │   │   ├── index.html
-    │   │   ├── hub.css
-    │   │   └── hub.js
-    │   ├── waiter/
-    │   │   ├── index.html
-    │   │   ├── waiter.css
-    │   │   └── waiter.js
-    │   ├── kitchen/
-    │   │   ├── index.html
-    │   │   ├── kitchen.css
-    │   │   └── kitchen.js
-    │   ├── manager/
-    │   │   ├── index.html
-    │   │   ├── manager.css
-    │   │   └── manager.js
-    │   ├── customer/
-    │   │   ├── index.html
-    │   │   ├── customer.css
-    │   │   └── customer.js
-    │   └── js/            # Shared scripts (socket client, license client)
-    │       ├── socket-client.js
-    │       └── license-client.js
-    └── data/              # Restaurant data (menu, orders, kitchen, license state)
+│   └── 404.html
+├── app/                   # Restaurant screens, mounted at /app/
+│   ├── hub/               # Multi-device control center
+│   │   ├── index.html
+│   │   ├── hub.css
+│   │   └── hub.js
+│   ├── waiter/            # Waiter Pad interface
+│   │   ├── index.html
+│   │   ├── waiter.css
+│   │   └── waiter.js
+│   ├── kitchen/           # Kitchen Display interface
+│   │   ├── index.html
+│   │   ├── kitchen.css
+│   │   └── kitchen.js
+│   ├── manager/           # Manager Panel interface
+│   │   ├── index.html
+│   │   ├── manager.css
+│   │   └── manager.js
+│   ├── customer/          # Customer self-ordering interface
+│   │   ├── index.html
+│   │   ├── customer.css
+│   │   └── customer.js
+│   └── js/                # Shared scripts (socket client, license client)
+│       ├── socket-client.js
+│       └── license-client.js
+└── data/                  # Restaurant data (menu, orders, kitchen, license state)
 ```
 
 ## 📄 License

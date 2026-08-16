@@ -6,27 +6,8 @@ on:
   pull_request:
 
 jobs:
-  test-public:
-    name: Test restaurant-public (marketing site)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      # Root workspaces lockfile installs both projects
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm test
-        working-directory: restaurant-public
-
-  test-local:
-    name: Test restaurant-local (restaurant system)
+  test:
+    name: Test restaurant system
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,10 +22,9 @@ jobs:
 
       - name: Run tests
         run: npm test
-        working-directory: restaurant-local
 
   syntax-check:
-    name: Syntax check all servers
+    name: Syntax check servers
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,6 +35,5 @@ jobs:
 
       - name: node --check every server entrypoint
         run: |
-          node --check restaurant-local/server.js
-          node --check restaurant-local/licensing-server.js
-          node --check restaurant-public/server.js
+          node --check server.js
+          node --check licensing-server.js
