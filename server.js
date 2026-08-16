@@ -1288,6 +1288,17 @@ io.on('connection', (socket) => {
 // unreachable on the public marketing deployment.
 if (!PUBLIC_ONLY) {
   app.use('/app', express.static(APP_DIR));
+
+  // Redirect legacy flat URLs (e.g. /app/waiter.html) to the new per-page
+  // folders (/app/waiter/) so already-printed QR codes keep working.
+  app.get('/app/:page.html', (req, res) => {
+    const page = req.params.page;
+    if (!['hub', 'waiter', 'kitchen', 'manager', 'customer'].includes(page)) {
+      return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+    }
+    const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    res.redirect(301, '/app/' + page + '/' + qs);
+  });
 }
 
 // ─── 404 handler (after all API routes) ────────────────────────────────
@@ -1323,11 +1334,11 @@ server.listen(PORT, '0.0.0.0', () => {
   if (PUBLIC_ONLY) {
     console.log('  Mode:           PUBLIC-ONLY (landing page only, app disabled)');
   } else {
-    console.log('  Hub:            http://localhost:' + PORT + '/app/hub.html');
-    console.log('  Waiter Pad:     http://localhost:' + PORT + '/app/waiter.html?table=01');
-    console.log('  Kitchen Display: http://localhost:' + PORT + '/app/kitchen.html');
-    console.log('  Manager Panel:   http://localhost:' + PORT + '/app/manager.html');
-    console.log('  Customer Menu:   http://localhost:' + PORT + '/app/customer.html?table=01');
+    console.log('  Hub:            http://localhost:' + PORT + '/app/hub/');
+    console.log('  Waiter Pad:     http://localhost:' + PORT + '/app/waiter/?table=01');
+    console.log('  Kitchen Display: http://localhost:' + PORT + '/app/kitchen/');
+    console.log('  Manager Panel:   http://localhost:' + PORT + '/app/manager/');
+    console.log('  Customer Menu:   http://localhost:' + PORT + '/app/customer/?table=01');
   }
   console.log('');
 });

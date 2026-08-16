@@ -1,25 +1,27 @@
-const CACHE_NAME = 'chauka-v3';
+const CACHE_NAME = 'chauka-v4';
 
 // Assets to cache on install
 const PRECACHE = [
   '/',
   '/index.html',
-  '/app/hub.html',
-  '/app/waiter.html',
-  '/app/kitchen.html',
-  '/app/manager.html',
-  '/app/customer.html',
-  '/css/style.css',
-  '/app/css/waiter.css',
-  '/app/css/kitchen.css',
-  '/app/css/manager.css',
-  '/app/css/customer.css',
+  '/app/hub/',
+  '/app/hub/hub.css',
+  '/app/hub/hub.js',
+  '/app/waiter/',
+  '/app/waiter/waiter.css',
+  '/app/waiter/waiter.js',
+  '/app/kitchen/',
+  '/app/kitchen/kitchen.css',
+  '/app/kitchen/kitchen.js',
+  '/app/manager/',
+  '/app/manager/manager.css',
+  '/app/manager/manager.js',
+  '/app/customer/',
+  '/app/customer/customer.css',
+  '/app/customer/customer.js',
   '/app/js/socket-client.js',
-  '/app/js/waiter.js',
-  '/app/js/kitchen.js',
-  '/app/js/manager.js',
-  '/app/js/customer.js',
   '/app/js/license-client.js',
+  '/css/style.css',
   '/manifest.json',
 ];
 

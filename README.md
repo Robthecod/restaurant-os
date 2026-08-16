@@ -35,12 +35,12 @@ A lightweight, event-driven restaurant management system that bridges front-of-h
 
    🌐 **Public marketing site (you):** set the env var `PUBLIC_ONLY=true` on the Render deployment — only the landing page, demo/signup forms, terms & privacy are served. The restaurant app and its APIs are **never mounted**, so they stay off the public internet.
 
-   🏠 **Restaurant app (local installs):** the app pages live under `/app/...` and are only served on local/LAN installs (the app folder isn't mounted in public-only mode):
-   - 🏠 **Hub:** `http://your-lan-ip:3000/app/hub.html`
-   - 📋 **Waiter Pad:** `http://your-lan-ip:3000/app/waiter.html?table=01`
-   - 🍳 **Kitchen Display:** `http://your-lan-ip:3000/app/kitchen.html`
-   - 📊 **Manager Panel:** `http://your-lan-ip:3000/app/manager.html`
-   - 📱 **Customer Menu:** `http://your-lan-ip:3000/app/customer.html?table=01`
+   🏠 **Restaurant app (local installs):** the app pages live under `/app/...` and are only served on local/LAN installs (the app folder isn't mounted in public-only mode). Each screen has its own folder with its own styles & scripts:
+   - 🏠 **Hub:** `http://your-lan-ip:3000/app/hub/`
+   - 📋 **Waiter Pad:** `http://your-lan-ip:3000/app/waiter/?table=01`
+   - 🍳 **Kitchen Display:** `http://your-lan-ip:3000/app/kitchen/`
+   - 📊 **Manager Panel:** `http://your-lan-ip:3000/app/manager/`
+   - 📱 **Customer Menu:** `http://your-lan-ip:3000/app/customer/?table=01`
 
 > **Note:** Render's free tier spins down after 15 minutes of inactivity. Your first visit after idle time will take ~30 seconds to wake up. After that, it works normally until idle again.
 
@@ -61,11 +61,11 @@ open http://localhost:3000
 
 | Interface | URL |
 |-----------|-----|
-| 🏠 Hub | http://localhost:3000/app/hub.html |
-| 📋 Waiter Pad | http://localhost:3000/app/waiter.html?table=01 |
-| 🍳 Kitchen Display | http://localhost:3000/app/kitchen.html |
-| 📊 Manager Panel | http://localhost:3000/app/manager.html |
-| 📱 Customer Menu | http://localhost:3000/app/customer.html?table=01 |
+| 🏠 Hub | http://localhost:3000/app/hub/ |
+| 📋 Waiter Pad | http://localhost:3000/app/waiter/?table=01 |
+| 🍳 Kitchen Display | http://localhost:3000/app/kitchen/ |
+| 📊 Manager Panel | http://localhost:3000/app/manager/ |
+| 📱 Customer Menu | http://localhost:3000/app/customer/?table=01 |
 
 ## 🔐 Licensing & Protection (Self-Hosted Installations)
 
@@ -137,7 +137,7 @@ Your own managed cloud deployment doesn't need a key — just leave `LICENSE_KEY
 ├── data/                  # Restaurant data (menu, orders, leads, license state)
 ├── public/                # 🌐 PUBLIC — served on every deployment
 │   ├── index.html         # Marketing landing page
-│   ├── 404.html           # (links to /app/hub.html on local installs)
+│   ├── 404.html           # (links to /app/hub/ on local installs)
 │   ├── terms.html
 │   ├── privacy.html
 │   ├── robots.txt
@@ -149,22 +149,28 @@ Your own managed cloud deployment doesn't need a key — just leave `LICENSE_KEY
 │   └── js/
 │       └── motion.js      # Shared animations (landing + app)
 └── app/                   # 🏠 LOCAL — restaurant system, mounted at /app/ only on local installs
-    ├── hub.html           # Multi-device control center
-    ├── waiter.html        # Waiter Pad interface
-    ├── kitchen.html       # Kitchen Display interface
-    ├── manager.html       # Manager Panel interface
-    ├── customer.html      # Customer self-ordering interface
-    ├── css/
+    ├── hub/               # Multi-device control center
+    │   ├── index.html
+    │   ├── hub.css
+    │   └── hub.js
+    ├── waiter/            # Waiter Pad interface
+    │   ├── index.html
     │   ├── waiter.css
+    │   └── waiter.js
+    ├── kitchen/           # Kitchen Display interface
+    │   ├── index.html
     │   ├── kitchen.css
+    │   └── kitchen.js
+    ├── manager/           # Manager Panel interface
+    │   ├── index.html
     │   ├── manager.css
-    │   └── customer.css
-    └── js/
+    │   └── manager.js
+    ├── customer/          # Customer self-ordering interface
+    │   ├── index.html
+    │   ├── customer.css
+    │   └── customer.js
+    └── js/                # Shared scripts (socket client, license client)
         ├── socket-client.js
-        ├── waiter.js
-        ├── kitchen.js
-        ├── manager.js
-        ├── customer.js
         └── license-client.js
 ```
 
