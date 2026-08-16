@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "start:license": "node licensing-server.js"
+    "start:license": "node licensing-server.js",
+    "test": "node --test test/smoke.test.js"
   },
   "keywords": [
     "restaurant",

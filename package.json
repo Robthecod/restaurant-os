@@ -12,7 +12,8 @@
     "start:local": "npm run start --workspace=restaurant-local",
     "start:public": "npm run start --workspace=restaurant-public",
     "start:license": "npm run start:license --workspace=restaurant-local",
-    "dev": "npm run start:local"
+    "dev": "npm run start:local",
+    "test": "npm test --workspace=restaurant-public && npm test --workspace=restaurant-local"
   },
   "keywords": [
     "restaurant",
