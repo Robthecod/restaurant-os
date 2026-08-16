@@ -3,8 +3,8 @@
 
 /* ─── Variables & Base ─────────────────────────────────────────────── */
 body.customer-page {
-  --c-bg: #fefce8;
-  --c-bg-gradient: linear-gradient(180deg, #fefce8 0%, #fff7ed 50%, #fefce8 100%);
+  --c-bg: #ffffff;
+  --c-bg-gradient: linear-gradient(180deg, #ffffff 0%, #fefcf6 50%, #ffffff 100%);
   --c-card: #ffffff;
   --c-card-border: #fde68a;
   --c-primary: #d97706;

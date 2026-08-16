@@ -1,9 +1,9 @@
-# Roux — Render Deployment Configuration
+# Chauka — Render Deployment Configuration
 # https://render.com/docs/infrastructure-as-code
 
 services:
   - type: web
-    name: roux
+    name: chauka
     env: node
     plan: free
     buildCommand: npm install
@@ -12,4 +12,9 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 18
+      # Public marketing deployment — serves only the landing page + lead
+      # forms. The restaurant app (/app/*) and its APIs stay disabled here.
+      # Local restaurant installs run without this variable.
+      - key: PUBLIC_ONLY
+        value: "true"
     autoDeploy: true

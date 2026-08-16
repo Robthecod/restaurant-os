@@ -1,4 +1,4 @@
-# 🤖 robots.txt for Roux
+# 🤖 robots.txt for Chauka
 # Allow all crawlers to index the public website
 
 User-agent: *

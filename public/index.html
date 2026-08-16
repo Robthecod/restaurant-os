@@ -3,23 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Roux is a real-time restaurant management platform — Waiter Pad, Kitchen Display, and Manager Panel. Works on any device. Made in India.">
+  <meta name="description" content="Chauka is a real-time restaurant management platform — Waiter Pad, Kitchen Display, and Manager Panel. Works on any device. Made in India.">
   <meta name="keywords" content="restaurant management, POS, kitchen display system, waiter app, restaurant software, India">
-  <meta name="author" content="Roux Technologies">
+  <meta name="author" content="Chauka Technologies">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://roux.app/">
+  <link rel="canonical" href="https://chauka.app/">
 
   <!-- Open Graph / Social Sharing -->
-  <meta property="og:title" content="Roux — Real-Time Restaurant Engine">
-  <meta property="og:description" content="Real-time ordering, kitchen display, and management — all in one lightweight system. No expensive hardware needed.">
+  <meta property="og:title" content="Chauka — Your Kitchen, Reinvented">
+  <meta property="og:description" content="Chauka is a real-time restaurant OS — Waiter Pad, Kitchen Display, and Manager Panel for modern Indian restaurants.">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://roux.app/">
+  <meta property="og:url" content="https://chauka.app/">
   <meta property="og:locale" content="en_IN">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Roux — Real-Time Restaurant Engine">
-  <meta name="twitter:description" content="Real-time ordering, kitchen display, and management — all in one lightweight system.">
+  <meta name="twitter:title" content="Chauka — Your Kitchen, Reinvented">
+  <meta name="twitter:description" content="Chauka is a real-time restaurant OS — Waiter Pad, Kitchen Display, and Manager Panel for modern Indian restaurants.">
 
   <!-- PWA / Icons -->
   <link rel="manifest" href="/manifest.json">
@@ -27,7 +27,7 @@
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥘</text></svg>">
   <meta name="theme-color" content="#d97706">
 
-  <title>Roux — Real-Time Restaurant Engine</title>
+  <title>Chauka — Your Kitchen, Reinvented</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -780,6 +780,72 @@
     .pricing-features li.missing::before { content: '—'; color: var(--text-muted); }
     .pricing-card .btn { width: 100%; justify-content: center; }
 
+    /* ─── Billing Toggle ─────────────────────────────────────────── */
+    .billing-toggle {
+      display: flex;
+      align-items: center;
+      width: fit-content;
+      gap: 4px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 100px;
+      padding: 4px;
+      margin: 32px auto 0;
+      position: relative;
+    }
+    .bt-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      border: none;
+      border-radius: 100px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 200ms var(--ease-out), background 200ms var(--ease-out), box-shadow 250ms var(--ease-out);
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+    }
+    .bt-btn.active {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .bt-btn:not(.active):hover {
+      color: var(--text-primary);
+    }
+    .bt-save {
+      background: #dcfce7;
+      color: #166534;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 3px 8px;
+      border-radius: 100px;
+    }
+    .price-amount {
+      display: inline-block;
+      transition: transform 300ms var(--ease-spring), opacity 220ms var(--ease-out);
+    }
+    .price-amount.switching {
+      transform: translateY(-6px) scale(0.96);
+      opacity: 0;
+    }
+    .pricing-yearly-note {
+      display: none;
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 18px;
+    }
+    .pricing-yearly-note.visible { display: block; }
+    .pricing-yearly-note strong { color: var(--accent-green); }
+
     /* ─── CTA ─────────────────────────────────────────────────────── */
     .cta-section {
       background: linear-gradient(135deg, #fef3c7, #ffedd5);
@@ -1154,8 +1220,8 @@
   <nav class="navbar" id="navbar">
     <div class="container">
       <a href="/" class="navbar-brand">
-        <span class="logo-icon">🍽️</span>
-        Roux
+        <span class="logo-icon"><!-- --></span>
+        Chauka
       </a>
       <div class="nav-links">
         <a href="#features">Features</a>
@@ -1175,15 +1241,15 @@
         <div class="hero-text">
           <div class="hero-tag hero-entrance hero-entrance-delay-1">
             <span class="dot"></span>
-            Live on 12+ restaurant floors
+            Your Kitchen. Your Chauka. Seamless.
           </div>
           <h1 class="hero-entrance hero-entrance-delay-2">
-            The OS your<br>
-            restaurant floor<br>
+            The restaurant OS your<br>
+            kitchen<br>
             <span class="highlight">actually deserves</span>
           </h1>
           <p class="hero-entrance hero-entrance-delay-3">
-            Real-time ordering, kitchen display, and management — all in one lightweight system.
+            Chauka connects your waiters, kitchen, and management in real time.
             No clunky terminals. No expensive hardware. Just your existing tablets and phones.
           </p>
           <div class="hero-actions hero-entrance hero-entrance-delay-3">
@@ -1213,7 +1279,7 @@
                 <span class="mockup-dot"></span>
                 <span class="mockup-dot"></span>
               </div>
-              <span class="mockup-title">🍳 Kitchen Display — Table 04</span>
+              <span class="mockup-title">Kitchen Display — Table 04</span>
             </div>
             <div class="mockup-body">
               <div class="mockup-card">
@@ -1221,21 +1287,21 @@
                   <span class="mockup-card-label">Items</span>
                   <span class="mockup-card-badge badge-pending">Pending</span>
                 </div>
-                <div class="mockup-item"><span>Spring Rolls x2</span><span>₹11.98</span></div>
-                <div class="mockup-item"><span>Garlic Bread x1</span><span>₹4.99</span></div>
+                <div class="mockup-item"><span>Spring Rolls x2</span><span>₹478</span></div>
+                <div class="mockup-item"><span>Garlic Bread x1</span><span>₹239</span></div>
               </div>
               <div class="mockup-card">
                 <div class="mockup-card-header">
                   <span class="mockup-card-label">Cooking</span>
                   <span class="mockup-card-badge badge-cooking">2 items</span>
                 </div>
-                <div class="mockup-item"><span>Chicken Biryani</span><span>₹14.99</span></div>
-                <div class="mockup-item"><span>Butter Chicken</span><span>₹15.99</span></div>
+                <div class="mockup-item"><span>Veg Biryani</span><span>₹359</span></div>
+                <div class="mockup-item"><span>Paneer Butter Masala</span><span>₹359</span></div>
               </div>
               <div class="mockup-card-full">
                 <div class="left">
                   <span class="table-num">T04</span>
-                  <span class="table-items">4 items · ₹47.95</span>
+                  <span class="table-items">4 items · ₹1,435</span>
                 </div>
                 <button class="btn-demo">✓ Ready</button>
               </div>
@@ -1249,8 +1315,7 @@
   <!-- ─── Features ────────────────────────────────────────────── -->
   <section class="section" id="features">
     <div class="container">
-      <div class="text-center reveal">
-        <div class="section-label mx-auto"><span>✦</span> Everything you need</div>
+      <div class="text-center reveal">          <div class="section-label mx-auto"><span>*</span> Everything you need</div>
         <h2 class="section-title">Built for the pace of a real kitchen</h2>
         <p class="section-subtitle mx-auto">
           From the moment a waiter takes an order to the plate hitting the pass — every second counts.
@@ -1258,7 +1323,7 @@
       </div>
       <div class="features-grid reveal reveal-delay-1">
         <div class="feature-card">
-          <div class="feature-icon gold">⚡</div>
+          <div class="feature-icon gold" style="font-weight:bold;font-size:1.2rem;">*</div>
           <h3>Real-Time Sync</h3>
           <p>Orders appear on the kitchen display instantly. No refresh, no delay. WebSocket-powered sub-100ms propagation.</p>
           <ul class="feature-list">
@@ -1268,7 +1333,7 @@
           </ul>
         </div>
         <div class="feature-card">
-          <div class="feature-icon blue">📱</div>
+          <div class="feature-icon blue" style="font-weight:bold;font-size:1.2rem;">*</div>
           <h3>Works on Any Device</h3>
           <p>Runs in any browser — cheap Android tablets, old iPads, or your phone. No expensive hardware required.</p>
           <ul class="feature-list">
@@ -1278,7 +1343,7 @@
           </ul>
         </div>
         <div class="feature-card">
-          <div class="feature-icon green">🎯</div>
+          <div class="feature-icon green" style="font-weight:bold;font-size:1.2rem;">*</div>
           <h3>Per-Item Status Tracking</h3>
           <p>Every item on every order tracks its own status: pending → cooking → ready. No more shouting across the kitchen.</p>
           <ul class="feature-list">
@@ -1288,7 +1353,7 @@
           </ul>
         </div>
         <div class="feature-card">
-          <div class="feature-icon purple">🛠️</div>
+          <div class="feature-icon purple" style="font-weight:bold;font-size:1.2rem;">*</div>
           <h3>Live Menu Management</h3>
           <p>Update prices, toggle availability, or add new items — changes sync to every waiter device instantly.</p>
           <ul class="feature-list">
@@ -1298,7 +1363,7 @@
           </ul>
         </div>
         <div class="feature-card">
-          <div class="feature-icon brown">📋</div>
+          <div class="feature-icon brown" style="font-weight:bold;font-size:1.2rem;">*</div>
           <h3>Smart Modifier System</h3>
           <p>Custom instructions per item with quick-select buttons. "No onions", "Extra spicy" — the kitchen sees it all.</p>
           <ul class="feature-list">
@@ -1308,7 +1373,7 @@
           </ul>
         </div>
         <div class="feature-card">
-          <div class="feature-icon red">🔔</div>
+          <div class="feature-icon red" style="font-weight:bold;font-size:1.2rem;">*</div>
           <h3>Ready Notifications</h3>
           <p>When the kitchen marks an order ready, the waiter gets a bright green banner. No more cold food at the pass.</p>
           <ul class="feature-list">
@@ -1318,7 +1383,7 @@
           </ul>
         </div>
         <div class="feature-card">
-          <div class="feature-icon purple">📱</div>
+          <div class="feature-icon purple" style="font-weight:bold;font-size:1.2rem;">*</div>
           <h3>QR Self-Ordering</h3>
           <p>Guests scan a QR code at their table to browse the menu and place orders directly from their phone. No app download needed.</p>
           <ul class="feature-list">
@@ -1334,8 +1399,7 @@
   <!-- ─── Interfaces ──────────────────────────────────────────── -->
   <section class="section" id="interfaces" style="background: var(--bg-secondary);">
     <div class="container">
-      <div class="text-center reveal">
-        <div class="section-label mx-auto"><span>✦</span> Three interfaces, one engine</div>
+      <div class="text-center reveal">          <div class="section-label mx-auto"><span>*</span> Three interfaces, one engine</div>
         <h2 class="section-title">Every role, perfectly equipped</h2>
         <p class="section-subtitle mx-auto">
           Waiter Pad, Kitchen Display, and Manager Panel — each built for the job at hand.
@@ -1345,7 +1409,6 @@
         <div class="interface-card">
           <div class="interface-preview waiter">
             <div class="device-frame">
-              <span>📋</span>
               <span>Waiter Pad</span>
             </div>
           </div>
@@ -1358,7 +1421,6 @@
         <div class="interface-card">
           <div class="interface-preview kitchen">
             <div class="device-frame big">
-              <span>🍳</span>
               <span>Kitchen Display</span>
             </div>
           </div>
@@ -1371,7 +1433,6 @@
         <div class="interface-card">
           <div class="interface-preview manager">
             <div class="device-frame big">
-              <span>📊</span>
               <span>Manager Panel</span>
             </div>
           </div>
@@ -1388,8 +1449,7 @@
   <!-- ─── How It Works ────────────────────────────────────────── -->
   <section class="section">
     <div class="container">
-      <div class="text-center reveal">
-        <div class="section-label mx-auto"><span>✦</span> Set up in minutes</div>
+      <div class="text-center reveal">          <div class="section-label mx-auto"><span>*</span> Set up in minutes</div>
         <h2 class="section-title">Three steps to a smarter floor</h2>
         <p class="section-subtitle mx-auto">
           No installation, no training manual, no IT guy needed.
@@ -1418,58 +1478,58 @@
   <!-- ─── Pricing ─────────────────────────────────────────────── -->
   <section class="section" id="pricing" style="background: var(--bg-secondary); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
     <div class="container">
-      <div class="text-center reveal">
-        <div class="section-label mx-auto"><span>✦</span> Simple pricing</div>
+      <div class="text-center reveal">          <div class="section-label mx-auto"><span>*</span> Simple pricing</div>
         <h2 class="section-title">No hidden fees. No long contracts.</h2>
         <p class="section-subtitle mx-auto">
-          Start with a free trial. Upgrade when you're ready.
+          One flat rate for the full system. Add guest-facing features whenever you're ready.
         </p>
       </div>
+      <div class="billing-toggle reveal" role="group" aria-label="Billing period">
+        <button type="button" class="bt-btn active" data-billing="monthly" aria-pressed="true">Monthly</button>
+        <button type="button" class="bt-btn" data-billing="yearly" aria-pressed="false">Yearly <span class="bt-save">2 months free</span></button>
+      </div>
       <div class="pricing-grid reveal reveal-delay-1">
-        <div class="pricing-card">
-          <div class="pricing-name">Starter</div>
-          <div class="pricing-price">₹29 <span class="period">/month</span></div>
-          <p class="pricing-desc">Perfect for small cafes and pop-ups.</p>
-          <ul class="pricing-features">
-            <li>Up to 2 devices</li>
-            <li>Full menu management</li>
-            <li>Real-time kitchen display</li>
-            <li>Email support</li>
-            <li class="missing">Analytics & reports</li>
-            <li class="missing">Multi-location</li>
-          </ul>
-          <a href="#cta" class="btn btn-secondary">Start Free Trial</a>
-        </div>
         <div class="pricing-card featured">
           <span class="featured-badge">Most popular</span>
-          <div class="pricing-name">Pro</div>
-          <div class="pricing-price">₹79 <span class="period">/month</span></div>
-          <p class="pricing-desc">For busy restaurants that need the full stack.</p>
+          <div class="pricing-name">Chauka Standard</div>
+          <div class="pricing-price"><span class="price-amount" data-monthly="₹3,000" data-yearly="₹30,000">₹3,000</span> <span class="period" data-monthly="/month" data-yearly="/year">/month</span></div>
+          <p class="pricing-desc">The complete restaurant engine — Waiter Pad, Kitchen Display &amp; Manager Panel — running on your own network.</p>
           <ul class="pricing-features">
-            <li>Up to 10 devices</li>
+            <li>Waiter Pad, Kitchen Display &amp; Manager Panel</li>
+            <li>Unlimited devices on your WiFi</li>
             <li>Full menu management</li>
-            <li>Real-time kitchen display</li>
+            <li>Real-time order sync</li>
+            <li>Sales analytics &amp; reports</li>
             <li>Priority support</li>
-            <li>Sales analytics & reports</li>
-            <li class="missing">Multi-location</li>
           </ul>
           <a href="#cta" class="btn btn-primary">Start Free Trial</a>
         </div>
         <div class="pricing-card">
-          <div class="pricing-name">Enterprise</div>
-          <div class="pricing-price">Custom</div>
-          <p class="pricing-desc">For multi-location restaurants and chains.</p>
+          <div class="pricing-name">Guest Bundle</div>
+          <div class="pricing-price"><span class="price-amount" data-monthly="₹500" data-yearly="₹5,000">₹500</span> <span class="period" data-monthly="/month" data-yearly="/year">/month</span></div>
+          <p class="pricing-desc">Everything your guests can touch — QR ordering, NFC table tags &amp; Google reviews — in one bundle.</p>
           <ul class="pricing-features">
-            <li>Unlimited devices</li>
-            <li>Full menu management</li>
-            <li>Real-time kitchen display</li>
-            <li>Dedicated support</li>
-            <li>Advanced analytics</li>
-            <li>Multi-location management</li>
+            <li>QR self-ordering menu</li>
+            <li>NFC table tags (tap to order)</li>
+            <li>Google Maps review prompts</li>
+            <li>Per-table QR codes</li>
+            <li>Live order tracking</li>
           </ul>
-          <a href="#cta" class="btn btn-secondary">Contact Sales</a>
+          <a href="#cta" class="btn btn-secondary">Add to Your Plan</a>
+        </div>
+        <div class="pricing-card">
+          <div class="pricing-name">Single Add-on</div>
+          <div class="pricing-price"><span class="price-amount" data-monthly="₹300" data-yearly="₹3,000">₹300</span> <span class="period" data-monthly="/month" data-yearly="/year">/month</span></div>
+          <p class="pricing-desc">Pick one — QR self-ordering or Google Maps review prompts. Add the other anytime.</p>
+          <ul class="pricing-features">
+            <li>QR self-ordering menu</li>
+            <li>Google Maps review prompts</li>
+            <li class="missing">NFC table tags</li>
+          </ul>
+          <a href="#cta" class="btn btn-secondary">Choose Yours</a>
         </div>
       </div>
+      <p class="pricing-yearly-note" id="yearlyNote">💡 Billed yearly, every plan comes with <strong>2 months free</strong> — that's ₹30,000, ₹5,000 &amp; ₹3,000 per year.</p>
     </div>
   </section>
 
@@ -1493,30 +1553,29 @@
   <!-- ─── Contact Section ──────────────────────────────────────────── -->
   <section class="section" id="contact" style="background: var(--bg-secondary);">
     <div class="container">
-      <div class="text-center reveal">
-        <div class="section-label mx-auto"><span>✦</span> Get in touch</div>
+      <div class="text-center reveal">          <div class="section-label mx-auto"><span>*</span> Get in touch</div>
         <h2 class="section-title">Have questions? We're here</h2>
         <p class="section-subtitle mx-auto">
           Whether you need help setting up, have a feature request, or just want to say hello — we'd love to hear from you.
         </p>
       </div>
       <div class="reveal reveal-delay-1" style="max-width:600px;margin:48px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <a href="mailto:support@roux.app" class="feature-card" style="text-decoration:none;padding:24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
+        <a href="mailto:support@chauka.app" class="feature-card" style="text-decoration:none;padding:24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
           <div class="feature-icon gold" style="margin-bottom:0;">📧</div>
           <h3 style="font-size:1rem;">Email Support</h3>
-          <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">support@roux.app</p>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">support@chauka.app</p>
           <p style="font-size:0.82rem;color:var(--text-secondary);margin:0;">We respond within 24 hours</p>
         </a>
         <a href="#" class="feature-card" style="text-decoration:none;padding:24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;" onclick="openModal('demoModal');return false;">
           <div class="feature-icon blue" style="margin-bottom:0;">💬</div>
           <h3 style="font-size:1rem;">Book a Demo</h3>
-          <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">See Roux in action</p>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">See Chauka in action</p>
           <p style="font-size:0.82rem;color:var(--text-secondary);margin:0;">We'll walk you through everything</p>
         </a>
-        <a href="mailto:support@roux.app" class="feature-card" style="text-decoration:none;padding:24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
+        <a href="mailto:support@chauka.app" class="feature-card" style="text-decoration:none;padding:24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
           <div class="feature-icon green" style="margin-bottom:0;">📚</div>
           <h3 style="font-size:1rem;">Documentation</h3>
-          <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">docs.roux.app</p>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin:0;">docs.chauka.app</p>
           <p style="font-size:0.82rem;color:var(--text-secondary);margin:0;">Setup guides & API reference</p>
         </a>
 
@@ -1527,8 +1586,7 @@
   <!-- ─── FAQ ─────────────────────────────────────────────────── -->
   <section class="section" id="faq">
     <div class="container">
-      <div class="text-center reveal">
-        <div class="section-label mx-auto"><span>✦</span> Got questions?</div>
+      <div class="text-center reveal">          <div class="section-label mx-auto"><span>*</span> Got questions?</div>
         <h2 class="section-title">Frequently asked</h2>
       </div>
       <div class="faq-list reveal reveal-delay-1">
@@ -1580,8 +1638,8 @@
             <span class="arrow">▼</span>
           </div>
           <div class="faq-answer">
-            For Pro and Enterprise plans, we offer remote setup assistance.
-            For Enterprise, we can do an on-site visit to get everything configured perfectly.
+            For Chauka Standard and above, we offer remote setup assistance.
+            For multi-location setups, we can do an on-site visit to get everything configured perfectly.
           </div>
         </div>
       </div>
@@ -1595,7 +1653,7 @@
         <div class="footer-brand">
           <a href="/" class="navbar-brand">
             <span class="logo-icon">🍽️</span>
-            Roux
+            Chauka
           </a>
           <p>The real-time restaurant engine that works on the hardware you already own.</p>
         </div>
@@ -1608,18 +1666,18 @@
         </div>
         <div class="footer-col">
           <h4>Company</h4>
-          <a href="mailto:support@roux.app">Contact</a>
+          <a href="mailto:support@chauka.app">Contact</a>
         </div>
         <div class="footer-col">
           <h4>Support</h4>
-          <a href="mailto:support@roux.app">Help Center</a>
+          <a href="mailto:support@chauka.app">Help Center</a>
           <a href="/privacy.html">Privacy Policy</a>
           <a href="/terms.html">Terms of Service</a>
         </div>
       </div>
       <div class="footer-middle" style="border-top:1px solid var(--border-color);padding:24px 0;margin-top:32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
         <div style="display:flex;align-items:center;gap:12px;">
-          <span style="font-size:0.88rem;color:var(--text-secondary);font-weight:600;">📬 Stay in the loop</span>            <form class="newsletter-form" style="display:flex;gap:8px;" onsubmit="return submitNewsletter(event, this)">
+          <span style="font-size:0.88rem;color:var(--text-secondary);font-weight:600;">Stay in the loop</span>            <form class="newsletter-form" style="display:flex;gap:8px;" onsubmit="event.preventDefault();showToast('🙌', 'Thanks for subscribing! We\'ll keep you posted.');this.querySelector('input').value='';">
             <input type="email" placeholder="your@email.com" required class="newsletter-input">
             <button type="submit" class="btn btn-primary" style="padding:10px 18px;font-size:0.82rem;">Subscribe</button>
           </form>
@@ -1630,8 +1688,8 @@
         </div>
       </div>
       <div class="footer-bottom" style="border-top:none;padding-top:16px;">
-        <span>&copy; 2026 Roux. All rights reserved.</span>
-        <span>Made in India 🇮🇳 · Built with ☕ and 🍕</span>
+        <span>&copy; 2026 Chauka. All rights reserved.</span>
+        <span>Made in India · Built with passion</span>
       </div>
     </div>
   </footer>
@@ -1640,8 +1698,8 @@
   <div class="cookie-banner" id="cookieBanner">
     <div class="cookie-content">
       <div class="cookie-text">
-        <span class="cookie-icon">🍪</span>
-        <span>We use essential cookies to make Roux work. No tracking, no ads, no nonsense. <a href="/privacy.html" style="color:var(--accent-amber);text-decoration:underline;">Learn more</a></span>
+
+        <span>We use essential cookies to make Chauka work. No tracking, no ads, no nonsense. <a href="/privacy.html" style="color:var(--accent-amber);text-decoration:underline;">Learn more</a></span>
       </div>
       <button class="btn btn-primary cookie-accept" id="cookieAccept" style="padding:10px 24px;font-size:0.85rem;white-space:nowrap;">Got it!</button>
     </div>
@@ -1656,7 +1714,7 @@
       <button class="modal-close" onclick="closeModal('demoModal')">✕</button>
       <span class="modal-icon">📅</span>
       <h2>Book a Demo</h2>
-      <p>See Roux in action. We'll show you around and answer any questions.</p>
+      <p>See Chauka in action. We'll show you around and answer any questions.</p>
       <form id="demoForm" onsubmit="return submitDemoForm(event)">
         <div class="form-row">
           <div class="form-group">
@@ -1862,7 +1920,7 @@
           showToast('📅', 'Thanks ' + name + '! We\'ll email you at ' + payload.email + contact + ' to confirm your demo.', 'info');
         })
         .catch(() => {
-          showToast('⚠️', 'Something went wrong. Please email us at support@roux.app.', 'info');
+          showToast('⚠️', 'Something went wrong. Please email us at support@chauka.app.', 'info');
         });
 
       form.reset();
@@ -1898,7 +1956,7 @@
           showToast('🚀', 'Welcome ' + name + '! Check your inbox at ' + payload.email + contact + ' for next steps.', 'success');
         })
         .catch(() => {
-          showToast('⚠️', 'Something went wrong. Please email us at support@roux.app.', 'info');
+          showToast('⚠️', 'Something went wrong. Please email us at support@chauka.app.', 'info');
         });
 
       form.reset();
@@ -1976,39 +2034,51 @@
       });
     });
 
-    // ─── Newsletter Form ─────────────────────────────────────────
-    function submitNewsletter(e, form) {
-      e.preventDefault();
-      const email = form.querySelector('input').value;
-      fetch('/api/newsletter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-        .then((r) => r.json())
-        .then(() => {
-          showToast('🙌', 'Thanks for subscribing! We\'ll keep you posted.');
-          form.querySelector('input').value = '';
-        })
-        .catch(() => {
-          showToast('⚠️', 'Something went wrong. Please try again.', 'info');
-        });
-      return false;
-    }
-
     // ─── Cookie consent banner ──────────────────────────────────────
     (function() {
       const banner = document.getElementById('cookieBanner');
       const acceptBtn = document.getElementById('cookieAccept');
 
-      if (!localStorage.getItem('roux_cookie_consent')) {
+      if (!localStorage.getItem('chauka_cookie_consent')) {
         setTimeout(() => banner.classList.add('visible'), 500);
       }
 
       acceptBtn.addEventListener('click', () => {
-        localStorage.setItem('roux_cookie_consent', 'accepted');
+        localStorage.setItem('chauka_cookie_consent', 'accepted');
         banner.classList.remove('visible');
         setTimeout(() => banner.remove(), 400);
+      });
+    })();
+
+    // ─── Billing period toggle (Monthly / Yearly) ───────────────────
+    (function() {
+      const buttons = document.querySelectorAll('.bt-btn');
+      const amounts = document.querySelectorAll('.price-amount');
+      const periods = document.querySelectorAll('.pricing-price .period');
+      const note = document.getElementById('yearlyNote');
+      if (!buttons.length || !amounts.length) return;
+
+      function applyBilling(period, animate) {
+        buttons.forEach((btn) => {
+          const active = btn.dataset.billing === period;
+          btn.classList.toggle('active', active);
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        if (note) note.classList.toggle('visible', period === 'yearly');
+        if (animate) amounts.forEach((el) => el.classList.add('switching'));
+        setTimeout(() => {
+          amounts.forEach((el) => {
+            if (el.dataset[period]) el.textContent = el.dataset[period];
+            el.classList.remove('switching');
+          });
+          periods.forEach((el) => {
+            if (el.dataset[period]) el.textContent = el.dataset[period];
+          });
+        }, animate ? 180 : 0);
+      }
+
+      buttons.forEach((btn) => {
+        btn.addEventListener('click', () => applyBilling(btn.dataset.billing, true));
       });
     })();
   </script>

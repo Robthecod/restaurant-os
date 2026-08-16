@@ -1,5 +1,5 @@
 /**
- * Shared Socket.io client for Roux.
+ * Shared Socket.io client for Chauka.
  * Provides a singleton socket connection and helper functions.
  */
 const RestaurantSocket = (() => {
@@ -15,7 +15,13 @@ const RestaurantSocket = (() => {
     }
 
     connect() {
-      if (this.socket && this.socket.connected) return;
+      // Prevent creating multiple socket connections
+      if (this.socket) {
+        if (!this.socket.connected) {
+          this.socket.connect();
+        }
+        return;
+      }
 
       this.socket = io(SERVER_URL, {
         transports: ['websocket', 'polling'],
@@ -48,14 +54,23 @@ const RestaurantSocket = (() => {
     on(event, callback) {
       if (!this.listeners[event]) {
         this.listeners[event] = [];
-        if (this.socket) {
-          this.socket.on(event, (data) => {
-            (this.listeners[event] || []).forEach((cb) => cb(data));
-          });
-        }
+      }
+      // Register socket-level listener if socket exists and this is the first listener
+      if (this.listeners[event].length === 0 && this.socket) {
+        this._registerSocketListener(event);
       }
       this.listeners[event].push(callback);
       return () => this.off(event, callback);
+    }
+
+    // Register the actual socket.io listener for an event
+    _registerSocketListener(event) {
+      if (!this.socket) return;
+      // Remove any existing listener to prevent duplicates on reconnect
+      this.socket.off(event);
+      this.socket.on(event, (data) => {
+        (this.listeners[event] || []).forEach((cb) => cb(data));
+      });
     }
 
     // Unsubscribe

@@ -101,7 +101,7 @@
 }
 
 .filter-btn:hover {
-  background: rgba(255,255,255,0.04);
+  background: rgba(0,0,0,0.03);
   color: var(--text-primary);
 }
 
@@ -202,7 +202,7 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .order-item:last-child {
@@ -454,7 +454,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  background: rgba(255,255,255,0.03);
+  background: rgba(0,0,0,0.02);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -491,7 +491,7 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: 6px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .order-item:last-child {
@@ -532,7 +532,7 @@
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--border-color);
-  background: rgba(255,255,255,0.02);
+  background: rgba(0,0,0,0.015);
 }
 
 .order-card-actions .btn {

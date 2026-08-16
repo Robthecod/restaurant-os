@@ -1,11 +1,12 @@
 {
-  "name": "roux",
+  "name": "chauka",
   "version": "1.0.0",
-  "description": "Roux — Real-Time Restaurant Engine. Waiter Pad, Kitchen Display, Manager Panel & Customer QR ordering.",
+  "description": "Chauka — Real-Time Restaurant Engine. Waiter Pad, Kitchen Display, Manager Panel & Customer QR ordering.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "start:license": "node licensing-server.js"
   },
   "keywords": [
     "restaurant",
@@ -16,7 +17,7 @@
     "real-time",
     "qr-ordering"
   ],
-  "license": "MIT",
+  "license": "UNLICENSED",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",

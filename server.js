@@ -3,7 +3,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
-const nodemailer = require('nodemailer');
+const https = require('https');
+const crypto = require('crypto');
+
 
 const app = express();
 const server = http.createServer(app);
@@ -19,123 +21,16 @@ const DATA_DIR = path.join(__dirname, 'data');
 const MENU_FILE = path.join(DATA_DIR, 'menu.json');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 const LEADS_FILE = path.join(DATA_DIR, 'leads.json');
-const EMAILS_DIR = path.join(__dirname, 'public', 'emails');
+const KITCHEN_FILE = path.join(DATA_DIR, 'kitchen.json');
+const LICENSE_FILE = path.join(DATA_DIR, 'license.json');
 
-// ─── Email Configuration ───────────────────────────────────────────────
-// Set these env vars to enable real email sending via SMTP.
-// Without them, emails are logged to console and stored in the outbox.
-const SMTP_HOST = process.env.SMTP_HOST || '';
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
-const SMTP_USER = process.env.SMTP_USER || '';
-const SMTP_PASS = process.env.SMTP_PASS || '';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@roux.app';
-const FROM_NAME = process.env.FROM_NAME || 'Roux';
-let emailTransporter = null;
-
-if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
-  emailTransporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_PORT === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-  });
-  console.log(`  📧 Email service configured: ${SMTP_HOST} (${FROM_EMAIL})`);
-} else {
-  console.log('  📧 Email service: DISABLED (set SMTP_HOST, SMTP_USER, SMTP_PASS to enable)');
-}
-
-// ─── Simple Template Engine ────────────────────────────────────────────
-// Handles: {{var}}, {{#section}}...{{/section}} (conditionals & arrays)
-function renderTemplate(template, data) {
-  let html = template;
-
-  // Handle {{#key}}...{{/key}} sections — arrays iterate, scalars check truthiness
-  html = html.replace(/\{\{#(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (match, key, content) => {
-    const val = data[key];
-    if (val === undefined || val === null) return '';
-    if (Array.isArray(val)) {
-      // Iterate over array items, rendering content for each
-      return val.map((item) => {
-        // Merge item into data scope for variable replacement
-        const scope = Object.assign({}, data, item);
-        let result = content;
-        result = result.replace(/\{\{(\w+)\}\}/g, (m, k) => {
-          const v = scope[k];
-          if (v === undefined || v === null) return '';
-          return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        });
-        return result;
-      }).join('');
-    }
-    // Scalar: return content if truthy
-    return val ? content : '';
-  });
-
-  // Handle simple variable replacement {{var}}
-  html = html.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-    const val = data[key];
-    if (val === undefined || val === null) return '';
-    return String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  });
-
-  return html;
-}
-
-// ─── Load & Render Email Template ──────────────────────────────────────
-function loadEmailTemplate(templateName, data) {
-  const filePath = path.join(EMAILS_DIR, templateName + '.html');
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Email template not found: ${templateName}`);
-  }
-  const template = fs.readFileSync(filePath, 'utf-8');
-  return renderTemplate(template, data);
-}
-
-// ─── Send Email (or log if no transporter) ─────────────────────────────
-async function sendEmail({ to, subject, html, leadId, type }) {
-  const record = {
-    to,
-    subject,
-    type: type || 'general',
-    leadId: leadId || null,
-    sentAt: new Date().toISOString(),
-    delivered: !!emailTransporter,
-  };
-
-  if (emailTransporter) {
-    try {
-      const info = await emailTransporter.sendMail({
-        from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
-        to,
-        subject,
-        html,
-      });
-      record.messageId = info.messageId;
-      console.log(`  📧 Email sent to ${to}: "${subject}" (${info.messageId})`);
-    } catch (err) {
-      console.error(`  ❌ Email FAILED to ${to}: "${subject}" — ${err.message}`);
-      record.delivered = false;
-      record.error = err.message;
-    }
-  } else {
-    console.log(`  📧 [EMAIL LOG] To: ${to}`);
-    console.log(`               Subject: ${subject}`);
-    console.log(`               Template: ${type}`);
-  }
-
-  // Store in outbox log
-  try {
-    const outboxFile = path.join(DATA_DIR, 'outbox.json');
-    let outbox = [];
-    if (fs.existsSync(outboxFile)) {
-      outbox = JSON.parse(fs.readFileSync(outboxFile, 'utf-8'));
-    }
-    outbox.push(record);
-    fs.writeFileSync(outboxFile, JSON.stringify(outbox, null, 2));
-  } catch (e) { /* silent */ }
-
-  return record;
-}
+// Public marketing site (landing page + lead forms) vs the local restaurant
+// app (waiter/kitchen/manager/customer/hub). Set PUBLIC_ONLY=true on the
+// public marketing deployment — the app pages and app APIs are then never
+// served, so the restaurant system stays off the public internet.
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const APP_DIR = path.join(__dirname, 'app');
+const PUBLIC_ONLY = process.env.PUBLIC_ONLY === 'true';
 
 // ─── File System Helpers ────────────────────────────────────────────────
 
@@ -262,31 +157,204 @@ initDataFile(MENU_FILE, {
 });
 
 initDataFile(ORDERS_FILE, { nextId: 1, orders: [] });
-initDataFile(LEADS_FILE, {
-  nextDemoId: 1,
-  nextSignupId: 1,
-  nextNewsletterId: 1,
-  demos: [],
-  signups: [],
-  newsletters: [],
-  conversations: [],
-});
+initDataFile(LEADS_FILE, { nextDemoId: 1, nextSignupId: 1, demos: [], signups: [] });
+initDataFile(KITCHEN_FILE, { nextIngredientId: 1, nextReturnId: 1, ingredientRequests: [], returnedDishes: [] });
+initDataFile(LICENSE_FILE, { installId: null, lastVerifiedAt: null, lastCheckedAt: null, locked: false });
 
-// ─── Migrate existing leads.json to new schema ────────────────────────
-if (fs.existsSync(LEADS_FILE)) {
+// ─── LICENSE / ACTIVATION MANAGER ────────────────────────────────────────
+// Self-hosted installs "phone home" to a licensing server. When the license
+// is missing, expired, revoked, or unpaid, the system locks down to
+// read-only: every mutating API call is rejected with HTTP 402 and screens
+// show a lock screen (see /js/license-client.js).
+//
+// Configuration (environment variables):
+//   LICENSE_KEY          The restaurant's license key. If empty, licensing
+//                        is disabled entirely (developer / managed-cloud mode).
+//   LICENSE_SERVER_URL   Your licensing server, e.g. https://licenses.yourdomain.com
+//   LICENSE_GRACE_DAYS   Days to keep running after the last successful
+//                        verification when the licensing server is offline.
+//                        Default: 3.
+//   LICENSE_CHECK_HOUR   Hour of day (0-23) for the once-daily morning check.
+//                        Default: 6 (6 AM).
+//   LICENSE_CHECK_INTERVAL_HOURS  If set (1-24+), verify every N hours instead
+//                        of once daily — use for snappier lockdown enforcement
+//                        (e.g. 1 = checks hourly). Default: unset (daily).
+
+const LICENSE_KEY = process.env.LICENSE_KEY || '';
+const LICENSE_SERVER_URL = (process.env.LICENSE_SERVER_URL || '').replace(/\/+$/, '');
+const LICENSE_GRACE_DAYS = Math.max(0, parseInt(process.env.LICENSE_GRACE_DAYS || '3', 10) || 0);
+const LICENSE_CHECK_HOUR = Math.min(23, Math.max(0, parseInt(process.env.LICENSE_CHECK_HOUR || '6', 10) || 6));
+const LICENSE_CHECK_INTERVAL_HOURS = Math.max(1, parseInt(process.env.LICENSE_CHECK_INTERVAL_HOURS || '0', 10) || 0);
+const GRACE_MS = LICENSE_GRACE_DAYS * 24 * 60 * 60 * 1000;
+
+const license = {
+  enabled: !!LICENSE_KEY,
+  locked: false,
+  installId: null,
+  lastVerifiedAt: null,
+  lastCheckedAt: null,
+  lastReason: null,
+};
+
+function readLicenseState() {
   try {
-    const leadsData = JSON.parse(fs.readFileSync(LEADS_FILE, 'utf-8'));
-    let needsWrite = false;
-    if (!leadsData.newsletters) { leadsData.newsletters = []; needsWrite = true; }
-    if (!leadsData.conversations) { leadsData.conversations = []; needsWrite = true; }
-    if (!leadsData.nextNewsletterId) { leadsData.nextNewsletterId = 1; needsWrite = true; }
-    if (needsWrite) {
-      fs.writeFileSync(LEADS_FILE, JSON.stringify(leadsData, null, 2));
-      console.log('  📋 Migrated leads.json to new schema');
-    }
-  } catch (e) {
-    console.error('  ⚠️ Failed to migrate leads.json:', e.message);
+    const data = readJSON(LICENSE_FILE);
+    license.installId = data.installId || null;
+    license.lastVerifiedAt = data.lastVerifiedAt || null;
+    license.lastCheckedAt = data.lastCheckedAt || null;
+    license.locked = !!data.locked;
+  } catch (err) {
+    /* keep defaults */
   }
+}
+
+function saveLicenseState() {
+  try {
+    writeJSON(LICENSE_FILE, {
+      installId: license.installId,
+      lastVerifiedAt: license.lastVerifiedAt,
+      lastCheckedAt: license.lastCheckedAt,
+      locked: license.locked,
+    });
+  } catch (err) {
+    console.error('  License: failed to persist state:', err.message);
+  }
+}
+
+function ensureInstallId() {
+  if (license.installId) return;
+  const os = require('os');
+  const raw = os.hostname() + '|' + os.platform() + '|' + crypto.randomBytes(8).toString('hex');
+  license.installId = crypto.createHash('sha256').update(raw).digest('hex').slice(0, 24);
+  saveLicenseState();
+}
+
+function setLocked(locked, reason) {
+  const changed = license.locked !== locked;
+  license.locked = locked;
+  license.lastReason = reason || null;
+  saveLicenseState();
+  if (changed) {
+    io.emit(locked ? 'license_locked' : 'license_unlocked', {
+      reason: reason || null,
+      at: new Date().toISOString(),
+    });
+    if (locked) {
+      console.log('  🔒 LICENSE LOCKED — ' + (reason || 'inactive or unpaid license'));
+    } else {
+      console.log('  🔓 License unlocked');
+    }
+  }
+}
+
+function verifyLicense() {
+  return new Promise((resolve) => {
+    if (!license.enabled) return resolve({ ok: true, offline: false });
+    if (!LICENSE_SERVER_URL) {
+      return resolve({ ok: false, offline: true, reason: 'LICENSE_SERVER_URL is not configured' });
+    }
+    ensureInstallId();
+
+    let target;
+    try {
+      target = new URL(LICENSE_SERVER_URL + '/api/license/verify');
+    } catch (err) {
+      return resolve({ ok: false, offline: true, reason: 'Invalid LICENSE_SERVER_URL' });
+    }
+    target.searchParams.set('key', LICENSE_KEY);
+    target.searchParams.set('installId', license.installId);
+    target.searchParams.set('hostname', require('os').hostname());
+
+    // Support both https (production) and http (local/LAN testing)
+    const client = target.protocol === 'https:' ? https : http;
+    const req = client.get(target, { timeout: 10000 }, (res) => {
+      let body = '';
+      res.on('data', (chunk) => { body += chunk; });
+      res.on('end', () => {
+        let data = null;
+        try { data = JSON.parse(body); } catch (err) { /* ignore */ }
+        // Only an explicit denial locks the system. 5xx / other unexpected
+        // responses from OUR licensing server (e.g. a 502 during a deploy)
+        // are treated as offline so the grace period applies instead of
+        // locking every restaurant because of a vendor-side glitch.
+        if (res.statusCode === 200 && data && data.valid) {
+          resolve({ ok: true, offline: false, data });
+        } else if (data && data.valid === false) {
+          resolve({ ok: false, offline: false, reason: data.reason || 'License rejected by server' });
+        } else if (res.statusCode === 400) {
+          resolve({ ok: false, offline: false, reason: 'License server rejected the request (HTTP 400)' });
+        } else if (res.statusCode >= 500) {
+          resolve({ ok: false, offline: true, reason: 'License server error (HTTP ' + res.statusCode + ')' });
+        } else {
+          resolve({ ok: false, offline: true, reason: 'Unexpected response from license server' });
+        }
+      });
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ ok: false, offline: true, reason: 'License server timed out' });
+    });
+    req.on('error', (err) => {
+      resolve({ ok: false, offline: true, reason: 'Cannot reach license server: ' + err.message });
+    });
+  });
+}
+
+async function runLicenseCheck() {
+  if (!license.enabled) return;
+  ensureInstallId();
+  license.lastCheckedAt = new Date().toISOString();
+
+  const result = await verifyLicense();
+
+  if (result.ok) {
+    license.lastVerifiedAt = new Date().toISOString();
+    setLocked(false, null);
+    const who = result.data && result.data.restaurant ? ' for ' + result.data.restaurant : '';
+    console.log('  ✅ License verified' + who);
+  } else if (result.offline) {
+    // Phone-home unreachable — rely on the grace period since last success.
+    const sinceVerified = license.lastVerifiedAt
+      ? Date.now() - new Date(license.lastVerifiedAt).getTime()
+      : Infinity;
+    if (sinceVerified <= GRACE_MS) {
+      setLocked(false, result.reason);
+      const daysLeft = Math.max(0, Math.ceil((GRACE_MS - sinceVerified) / 86400000));
+      console.log(`  ⚠️  License server unreachable — offline grace: ~${daysLeft} day(s) remaining`);
+    } else {
+      setLocked(true, 'License server unreachable beyond the ' + LICENSE_GRACE_DAYS + '-day grace period');
+    }
+  } else {
+    // Server responded: license is invalid, expired, or revoked.
+    setLocked(true, result.reason);
+  }
+
+  saveLicenseState();
+}
+
+function scheduleNextCheck() {
+  // Interval mode: verify every N hours for snappier enforcement
+  if (LICENSE_CHECK_INTERVAL_HOURS > 0) {
+    const delay = LICENSE_CHECK_INTERVAL_HOURS * 60 * 60 * 1000;
+    setTimeout(() => {
+      runLicenseCheck();
+      scheduleNextCheck();
+    }, delay);
+    console.log('  License: next verification in ' + LICENSE_CHECK_INTERVAL_HOURS + ' hour(s)');
+    return;
+  }
+
+  // Default: once daily at the configured morning hour
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(LICENSE_CHECK_HOUR, 0, 0, 0);
+  if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
+  setTimeout(() => {
+    runLicenseCheck();
+    scheduleNextCheck();
+  }, next.getTime() - now.getTime());
+  console.log('  License: next verification ' + next.toLocaleString());
 }
 
 // ─── Middleware ──────────────────────────────────────────────────────────
@@ -307,8 +375,8 @@ app.get('/landing.html', (req, res) => {
   res.redirect(301, '/');
 });
 
-// Serve static files from /public
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static files from /public (landing page, terms, privacy, shared assets)
+app.use(express.static(PUBLIC_DIR));
 
 // ─── LEAD GENERATION API ─────────────────────────────────────────────
 
@@ -341,48 +409,14 @@ app.post('/api/demo', (req, res) => {
     // Notify via socket.io
     io.emit('new_demo_booking', demo);
 
-    console.log(`  📅 Demo booking #${demo.id}: ${name} — ${restaurant} (${email})`);
-    if (demo.phone) console.log(`     Phone: ${demo.phone}`);
-    if (demo.message) console.log(`     Note: ${demo.message}`);
+    console.log(`  Demo booking #${demo.id}: ${name} — ${restaurant} (${email})`);
+    if (demo.phone) console.log('     Phone: ' + demo.phone);
+    if (demo.message) console.log('     Note: ' + demo.message);
 
     res.status(201).json({ success: true, id: demo.id });
   } catch (err) {
     console.error('Demo booking error:', err);
     res.status(500).json({ error: 'Failed to book demo' });
-  }
-});
-
-// POST /api/newsletter — Newsletter subscription
-app.post('/api/newsletter', (req, res) => {
-  try {
-    const data = readJSON(LEADS_FILE);
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ error: 'email is required' });
-    }
-
-    // Check for duplicates
-    const exists = data.newsletters.some((s) => s.email === email);
-    if (exists) {
-      return res.json({ success: true, message: 'Already subscribed' });
-    }
-
-    const sub = {
-      id: data.nextNewsletterId,
-      email,
-      subscribedAt: new Date().toISOString(),
-    };
-
-    data.nextNewsletterId++;
-    data.newsletters.push(sub);
-    writeJSON(LEADS_FILE, data);
-
-    console.log(`  📬 Newsletter signup: ${email}`);
-    res.status(201).json({ success: true, id: sub.id });
-  } catch (err) {
-    console.error('Newsletter error:', err);
-    res.status(500).json({ error: 'Failed to subscribe' });
   }
 });
 
@@ -414,9 +448,9 @@ app.post('/api/signup', (req, res) => {
     // Notify via socket.io
     io.emit('new_signup', signup);
 
-    console.log(`  🚀 Free trial signup #${signup.id}: ${name} — ${restaurant} (${email})`);
-    if (signup.phone) console.log(`     Phone: ${signup.phone}`);
-    if (signup.teamSize) console.log(`     Team: ${signup.teamSize}`);
+    console.log(`  Free trial signup #${signup.id}: ${name} — ${restaurant} (${email})`);
+    if (signup.phone) console.log('     Phone: ' + signup.phone);
+    if (signup.teamSize) console.log('     Team: ' + signup.teamSize);
 
     res.status(201).json({ success: true, id: signup.id });
   } catch (err) {
@@ -425,219 +459,202 @@ app.post('/api/signup', (req, res) => {
   }
 });
 
-// ─── EMAIL & LEAD MANAGEMENT API ──────────────────────────────────
+// ─── PUBLIC-ONLY GATE ────────────────────────────────────────────────────
+// On the marketing deployment, everything from here on is restaurant-app
+// functionality — block all /api calls. (/app page URLs naturally fall
+// through to the 404 handler since the app folder is never mounted.)
+app.use((req, res, next) => {
+  if (!PUBLIC_ONLY) return next();
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  next();
+});
 
-// GET /api/leads — Get all leads (demos, signups, newsletters, conversations)
-// Supports ?type=demo|signup|newsletter|all and ?status=pending|active|handled
-app.get('/api/leads', (req, res) => {
-  try {
-    const data = readJSON(LEADS_FILE);
-    const type = req.query.type || 'all';
-    const statusFilter = req.query.status || 'all';
+// ─── LICENSE API ─────────────────────────────────────────────────────────
+// (Placed after lead-gen routes so demo/signup stay open, and before the
+// lockdown middleware so they work even while locked.)
 
-    let results = [];
+// GET /api/license/status — current license state (lock screens poll this)
+app.get('/api/license/status', (req, res) => {
+  res.json({
+    licensingEnabled: license.enabled,
+    locked: license.locked,
+    installId: license.installId,
+    lastVerifiedAt: license.lastVerifiedAt,
+    lastCheckedAt: license.lastCheckedAt,
+    lastReason: license.lastReason,
+    graceDays: LICENSE_GRACE_DAYS,
+    checkHour: LICENSE_CHECK_HOUR,
+  });
+});
 
-    if (type === 'all' || type === 'demo') {
-      let demos = data.demos.map((d) => ({ ...d, leadType: 'demo' }));
-      if (statusFilter !== 'all') demos = demos.filter((d) => d.status === statusFilter);
-      results = results.concat(demos);
-    }
-    if (type === 'all' || type === 'signup') {
-      let signups = data.signups.map((s) => ({ ...s, leadType: 'signup' }));
-      if (statusFilter !== 'all') signups = signups.filter((s) => s.status === statusFilter);
-      results = results.concat(signups);
-    }
-    if (type === 'all' || type === 'newsletter') {
-      results = results.concat(data.newsletters.map((s) => ({ ...s, leadType: 'newsletter' })));
-    }
-
-    // Sort by newest first
-    results.sort((a, b) => new Date(b.createdAt || b.subscribedAt) - new Date(a.createdAt || a.subscribedAt));
-
+// POST /api/license/check — force an immediate re-verification
+app.post('/api/license/check', (req, res) => {
+  if (!license.enabled) {
+    return res.json({ licensingEnabled: false, locked: false });
+  }
+  runLicenseCheck().then(() => {
     res.json({
-      total: results.length,
-      demosCount: data.demos.length,
-      signupsCount: data.signups.length,
-      newslettersCount: data.newsletters.length,
-      pendingCount: data.demos.filter((d) => d.status === 'pending').length + data.signups.filter((s) => s.status === 'pending').length,
-      leads: results,
+      licensingEnabled: true,
+      locked: license.locked,
+      lastVerifiedAt: license.lastVerifiedAt,
+      lastCheckedAt: license.lastCheckedAt,
+      lastReason: license.lastReason,
     });
-  } catch (err) {
-    console.error('Get leads error:', err);
-    res.status(500).json({ error: 'Failed to fetch leads' });
-  }
+  });
 });
 
-// GET /api/leads/:type/:id — Get a single lead
-app.get('/api/leads/:type/:id', (req, res) => {
-  try {
-    const data = readJSON(LEADS_FILE);
-    const { type, id } = req.params;
-    const leadId = parseInt(id);
-
-    let lead;
-    if (type === 'demo') lead = data.demos.find((d) => d.id === leadId);
-    else if (type === 'signup') lead = data.signups.find((s) => s.id === leadId);
-
-    if (!lead) return res.status(404).json({ error: 'Lead not found' });
-
-    // Get conversations for this lead
-    const conversations = data.conversations.filter((c) => c.leadType === type && c.leadId === leadId);
-
-    res.json({ lead: { ...lead, leadType: type }, conversations });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch lead' });
-  }
+// ─── LICENSE LOCKDOWN MIDDLEWARE ─────────────────────────────────────────
+// When locked, reject all mutating /api requests (HTTP 402). Read-only GET
+// requests stay available so staff can still view data.
+app.use('/api', (req, res, next) => {
+  if (!license.enabled || !license.locked) return next();
+  const method = (req.method || 'GET').toUpperCase();
+  if (method === 'GET' || method === 'OPTIONS' || method === 'HEAD') return next();
+  return res.status(402).json({
+    error: 'LICENSE_LOCKED',
+    message: 'This system is locked because the license is inactive or unpaid. Please contact your service provider to renew.',
+    locked: true,
+  });
 });
 
-// PUT /api/leads/:type/:id — Update lead status
-app.put('/api/leads/:type/:id', (req, res) => {
+// ─── CATEGORY MANAGEMENT API ─────────────────────────────────────────────
+
+// POST /api/menu/category — Add a new category
+app.post('/api/menu/category', (req, res) => {
   try {
-    const data = readJSON(LEADS_FILE);
-    const { type, id } = req.params;
-    const leadId = parseInt(id);
-    const { status, notes } = req.body;
+    const menu = readJSON(MENU_FILE);
+    const { key, name } = req.body;
 
-    let lead;
-    let list;
-    if (type === 'demo') { list = data.demos; lead = list.find((d) => d.id === leadId); }
-    else if (type === 'signup') { list = data.signups; lead = list.find((s) => s.id === leadId); }
-
-    if (!lead) return res.status(404).json({ error: 'Lead not found' });
-
-    if (status) lead.status = status;
-    if (notes) lead.notes = notes;
-    lead.updatedAt = new Date().toISOString();
-
-    writeJSON(LEADS_FILE, data);
-    io.emit('lead_updated', { ...lead, leadType: type });
-
-    console.log(`  Lead #${leadId} (${type}) updated: status=${status || 'unchanged'}`);
-    res.json({ ...lead, leadType: type });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to update lead' });
-  }
-});
-
-// POST /api/leads/:type/:id/reply — Reply to a lead (renders template + sends email)
-app.post('/api/leads/:type/:id/reply', async (req, res) => {
-  try {
-    const data = readJSON(LEADS_FILE);
-    const { type, id } = req.params;
-    const leadId = parseInt(id);
-    const { message, subject, templateName } = req.body;
-
-    let lead;
-    if (type === 'demo') lead = data.demos.find((d) => d.id === leadId);
-    else if (type === 'signup') lead = data.signups.find((s) => s.id === leadId);
-
-    if (!lead) return res.status(404).json({ error: 'Lead not found' });
-
-    // Build email content
-    const template = templateName || 'reply';
-    const emailSubject = subject || `Re: Your ${type === 'demo' ? 'Demo Request' : 'Roux Signup'}`;
-    const emailHtml = loadEmailTemplate(template, {
-      name: lead.name,
-      email: lead.email,
-      restaurant: lead.restaurant || 'your restaurant',
-      message: message || 'Thanks for reaching out to Roux! We got your inquiry and will get back to you shortly.',
-      actionUrl: `${req.protocol}://${req.get('host')}/`,
-      actionText: 'Visit Roux',
-    });
-
-    // Send the email
-    const record = await sendEmail({
-      to: lead.email,
-      subject: emailSubject,
-      html: emailHtml,
-      leadId,
-      type: `reply_${type}`,
-    });
-
-    // Log the conversation
-    if (!data.conversations) data.conversations = [];
-    data.conversations.push({
-      id: data.conversations.length + 1,
-      leadType: type,
-      leadId,
-      direction: 'outgoing',
-      subject: emailSubject,
-      message: message || '',
-      sentAt: record.sentAt,
-      delivered: record.delivered,
-    });
-    writeJSON(LEADS_FILE, data);
-
-    res.json({ success: true, email: record, conversation: data.conversations[data.conversations.length - 1] });
-  } catch (err) {
-    console.error('Reply error:', err);
-    res.status(500).json({ error: 'Failed to send reply' });
-  }
-});
-
-// POST /api/email/send — Send a custom email (AI-friendly)
-app.post('/api/email/send', async (req, res) => {
-  try {
-    const { to, subject, html, templateName, templateData } = req.body;
-
-    if (!to || !subject) {
-      return res.status(400).json({ error: 'to and subject are required' });
+    if (!key || !name) {
+      return res.status(400).json({ error: 'key and name are required' });
     }
 
-    let emailHtml = html;
-    if (templateName && !html) {
-      emailHtml = loadEmailTemplate(templateName, templateData || {});
+    if (menu.categories[key]) {
+      return res.status(400).json({ error: 'Category "' + key + '" already exists' });
     }
 
-    const record = await sendEmail({ to, subject, html: emailHtml, type: 'custom' });
-    res.json({ success: true, email: record });
+    menu.categories[key] = [];
+    writeJSON(MENU_FILE, menu);
+    io.emit('menu_updated', menu);
+
+    console.log('  Category added: ' + name + ' (' + key + ')');
+
+    res.status(201).json({ key, name });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to send email' });
+    res.status(500).json({ error: 'Failed to add category' });
   }
 });
 
-// GET /api/email/templates — List available email templates
-app.get('/api/email/templates', (req, res) => {
-  try {
-    const files = fs.readdirSync(EMAILS_DIR).filter((f) => f.endsWith('.html'));
-    const templates = files.map((f) => ({
-      name: f.replace('.html', ''),
-      filename: f,
-    }));
-    res.json({ templates });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to list templates' });
-  }
-});
+// ─── INGREDIENT REQUEST API ────────────────────────────────────────────
 
-// GET /api/email/templates/:name — Preview a rendered template
-app.get('/api/email/templates/:name', (req, res) => {
+// POST /api/ingredient-request — Report missing ingredient
+app.post('/api/ingredient-request', (req, res) => {
   try {
-    const { name } = req.params;
-    const sampleData = {
-      name: 'Sample Guest',
-      email: 'guest@restaurant.com',
-      restaurant: 'Sample Restaurant',
-      date: new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-      phone: '+91 98765 43210',
-      message: 'This is a sample message from the Roux team.',
-      orderId: '42',
-      tableNumber: '05',
-      itemCount: '3',
-      total: '1,247',
-      managerUrl: `http://localhost:${PORT}/manager.html`,
-      waiterUrl: `http://localhost:${PORT}/waiter.html?table=01`,
-      kitchenUrl: `http://localhost:${PORT}/kitchen.html`,
-      trackUrl: `http://localhost:${PORT}/customer.html?table=05`,
-      items: [{ name: 'Paneer Butter Masala', price: '359', qty: '2', modifiers: 'Extra spicy' }, { name: 'Butter Naan', price: '119', qty: '3' }],
-      actionUrl: `http://localhost:${PORT}/`,
-      actionText: 'Get Started',
+    const data = readJSON(KITCHEN_FILE);
+    const { ingredient, quantity, requestedBy, tableNumber } = req.body;
+
+    if (!ingredient || !quantity) {
+      return res.status(400).json({ error: 'ingredient and quantity are required' });
+    }
+
+    const request = {
+      id: data.nextIngredientId,
+      ingredient,
+      quantity,
+      requestedBy: requestedBy || 'Staff',
+      tableNumber: tableNumber || '',
+      status: 'open',
+      createdAt: new Date().toISOString(),
     };
 
-    const html = loadEmailTemplate(name, sampleData);
-    res.send(html);
+    data.nextIngredientId++;
+    data.ingredientRequests.push(request);
+    writeJSON(KITCHEN_FILE, data);
+
+    io.emit('new_ingredient_request', request);
+    console.log(`  Ingredient request #${request.id}: ${ingredient} — ${quantity} (by ${request.requestedBy})`);
+
+    res.status(201).json({ success: true, id: request.id });
   } catch (err) {
-    res.status(404).json({ error: `Template "${name}" not found` });
+    console.error('Ingredient request error:', err);
+    res.status(500).json({ error: 'Failed to submit request' });
+  }
+});
+
+// ─── INGREDIENT REQUESTS API (GET + PATCH) ─────────────────────────────
+
+// GET /api/ingredient-requests — Fetch all open ingredient requests
+app.get('/api/ingredient-requests', (req, res) => {
+  try {
+    const data = readJSON(KITCHEN_FILE);
+    const openRequests = data.ingredientRequests.filter(r => r.status === 'open');
+    res.json(openRequests);
+  } catch (err) {
+    console.error('Fetch ingredient requests error:', err);
+    res.status(500).json({ error: 'Failed to fetch ingredient requests' });
+  }
+});
+
+// PATCH /api/ingredient-requests/:id/resolve — Mark an ingredient request as resolved
+app.patch('/api/ingredient-requests/:id/resolve', (req, res) => {
+  try {
+    const data = readJSON(KITCHEN_FILE);
+    const requestId = parseInt(req.params.id);
+    const request = data.ingredientRequests.find(r => r.id === requestId);
+
+    if (!request) {
+      return res.status(404).json({ error: 'Ingredient request not found' });
+    }
+
+    request.status = 'resolved';
+    request.resolvedAt = new Date().toISOString();
+    writeJSON(KITCHEN_FILE, data);
+
+    io.emit('ingredient_request_resolved', request);
+    console.log(`  Ingredient request #${requestId}: ${request.ingredient} — RESOLVED`);
+
+    res.json({ success: true, request });
+  } catch (err) {
+    console.error('Resolve ingredient request error:', err);
+    res.status(500).json({ error: 'Failed to resolve request' });
+  }
+});
+
+// ─── RETURNED DISH API ─────────────────────────────────────────────────
+
+// POST /api/returned-dish — Report a dish sent back (waiter only)
+app.post('/api/returned-dish', (req, res) => {
+  try {
+    const data = readJSON(KITCHEN_FILE);
+    const { dishName, quantity, reason, amount, tableNumber } = req.body;
+
+    if (!dishName || !amount) {
+      return res.status(400).json({ error: 'dishName and amount are required' });
+    }
+
+    const returned = {
+      id: data.nextReturnId,
+      dishName,
+      quantity: quantity || 1,
+      reason: reason || 'Incorrectly prepared',
+      amount: parseFloat(amount),
+      tableNumber: tableNumber || '',
+      createdAt: new Date().toISOString(),
+    };
+
+    data.nextReturnId++;
+    data.returnedDishes.push(returned);
+    writeJSON(KITCHEN_FILE, data);
+
+    io.emit('new_returned_dish', returned);
+    console.log(`  Returned dish #${returned.id}: ${dishName} x${returned.quantity} — ₹${returned.amount}`);
+
+    res.status(201).json({ success: true, id: returned.id });
+  } catch (err) {
+    console.error('Returned dish error:', err);
+    res.status(500).json({ error: 'Failed to report returned dish' });
   }
 });
 
@@ -705,7 +722,7 @@ app.post('/api/menu', (req, res) => {
     writeJSON(MENU_FILE, menu);
 
     io.emit('menu_updated', menu);
-    console.log(`  Menu item added: ${name} (₹${price}) in ${category}`);
+    console.log('  Menu item added: ' + name + ' (₹' + price + ') in ' + category);
 
     res.status(201).json(newItem);
   } catch (err) {
@@ -829,7 +846,7 @@ app.post('/api/orders/customer', (req, res) => {
 
     // Broadcast to Kitchen Display
     io.emit('kitchen_new_order', order);
-    console.log(`  🛒 Customer Order #${order.id} placed for Table ${order.tableNumber}`);
+    console.log('  Customer Order #' + order.id + ' placed for Table ' + order.tableNumber);
 
     res.status(201).json(order);
   } catch (err) {
@@ -867,7 +884,7 @@ app.post('/api/orders', (req, res) => {
 
     // Broadcast new order to Kitchen Display
     io.emit('kitchen_new_order', order);
-    console.log(`  Order #${order.id} placed for Table ${order.tableNumber}`);
+    console.log('  Order #' + order.id + ' placed for Table ' + order.tableNumber);
 
     res.status(201).json(order);
   } catch (err) {
@@ -936,7 +953,7 @@ app.put('/api/orders/:id/status', (req, res) => {
     // Notify the specific waiter when order is ready
     if (status === 'ready') {
       io.emit('waiter_order_ready', order);
-      console.log(`  Order #${orderId} marked READY — notified waiter`);
+      console.log('  Order #' + orderId + ' marked READY — notified waiter');
     }
 
     io.emit('order_status_updated', order);
@@ -989,7 +1006,7 @@ app.put('/api/orders/:id/items/:itemIndex/status', (req, res) => {
     // Notify waiter if the order becomes fully ready
     if (newOrderStatus === 'ready' && status === 'ready') {
       io.emit('waiter_order_ready', order);
-      console.log(`  Order #${orderId} all items READY — notified waiter`);
+      console.log('  Order #' + orderId + ' all items READY — notified waiter');
     }
 
     res.json({ order, item, itemIndex });
@@ -1173,6 +1190,16 @@ app.get('/api/analytics', (req, res) => {
         revenue: Math.round((itemRevenue[name] || 0) * 100) / 100,
       }));
 
+    // ─── Wastage / Returns from sent-back dishes ───
+    const kitchenData = readJSON(KITCHEN_FILE);
+    const returnedDishes = kitchenData.returnedDishes || [];
+    let totalWastage = 0;
+    let totalReturns = 0;
+    for (const rd of returnedDishes) {
+      totalWastage += rd.amount * (rd.quantity || 1);
+      totalReturns++;
+    }
+
     res.json({
       summary: {
         totalOrders: completedOrders.length,
@@ -1183,6 +1210,8 @@ app.get('/api/analytics', (req, res) => {
             ? Math.round((totalRevenue / completedOrders.length) * 100) / 100
             : 0,
         allOrders: orders.length,
+        totalWastage: Math.round(totalWastage * 100) / 100,
+        totalReturns,
       },
       periods: {
         today: { orders: ordersToday, revenue: Math.round(revenueToday * 100) / 100 },
@@ -1208,6 +1237,12 @@ io.on('connection', (socket) => {
 
   // Allow kitchen to update order status via WebSocket
   socket.on('update_order_status', (data) => {
+    if (PUBLIC_ONLY) return; // app functionality — never on the public deployment
+    // Refuse writes while the license is locked (and flip every screen to the lock screen)
+    if (license.enabled && license.locked) {
+      io.emit('license_locked', { reason: license.lastReason });
+      return;
+    }
     const { orderId, status } = data;
     const fileData = readJSON(ORDERS_FILE);
     const order = fileData.orders.find((o) => o.id === orderId);
@@ -1229,6 +1264,13 @@ io.on('connection', (socket) => {
   });
 });
 
+// ─── Restaurant app pages (local installs only) ─────────────────────────
+// Mounted at /app/... — never mounted when PUBLIC_ONLY=true, so the app is
+// unreachable on the public marketing deployment.
+if (!PUBLIC_ONLY) {
+  app.use('/app', express.static(APP_DIR));
+}
+
 // ─── 404 handler (after all API routes) ────────────────────────────────
 app.use((req, res) => {
   if (req.path.startsWith('/api/') || req.path.startsWith('/socket.io/')) {
@@ -1240,18 +1282,33 @@ app.use((req, res) => {
 
 // ─── START SERVER ───────────────────────────────────────────────────────
 
+// Kick off license verification + schedule the next check
+if (license.enabled) {
+  readLicenseState();
+  ensureInstallId();
+  runLicenseCheck();
+  scheduleNextCheck();
+} else {
+  console.log('  Licensing disabled (set LICENSE_KEY to enable).');
+}
+
 server.listen(PORT, '0.0.0.0', () => {
   const lanIP = getLANIP();
   console.log('');
-  console.log('  ╔══════════════════════════════════════════════╗');
-  console.log(`  ║    🥘  ROUX RESTAURANT ENGINE                  ║`);
-  console.log(`  ║    Running on http://0.0.0.0:${PORT}              ║`);
-  console.log('  ╚══════════════════════════════════════════════╝');
+  console.log('  ================================================');
+  console.log('     CHAUKA RESTAURANT ENGINE');
+  console.log('     Running on http://0.0.0.0:' + PORT);
+  console.log('  ================================================');
   console.log('');
-  console.log(`  📡 LAN Access:     http://${lanIP}:${PORT}`);
-  console.log(`  📋 Waiter Pad:     http://localhost:${PORT}/waiter.html?table=01`);
-  console.log(`  🍳 Kitchen Display: http://localhost:${PORT}/kitchen.html`);
-  console.log(`  📊 Manager Panel:   http://localhost:${PORT}/manager.html`);
-  console.log(`  📬 Email Inbox:     http://localhost:${PORT}/email-inbox.html`);
+  console.log('  LAN Access:     http://' + lanIP + ':' + PORT);
+  if (PUBLIC_ONLY) {
+    console.log('  Mode:           PUBLIC-ONLY (landing page only, app disabled)');
+  } else {
+    console.log('  Hub:            http://localhost:' + PORT + '/app/hub.html');
+    console.log('  Waiter Pad:     http://localhost:' + PORT + '/app/waiter.html?table=01');
+    console.log('  Kitchen Display: http://localhost:' + PORT + '/app/kitchen.html');
+    console.log('  Manager Panel:   http://localhost:' + PORT + '/app/manager.html');
+    console.log('  Customer Menu:   http://localhost:' + PORT + '/app/customer.html?table=01');
+  }
   console.log('');
 });

@@ -3,7 +3,7 @@
 
 /* ─── Hamburger Button ──────────────────────────────────────────────── */
 .hamburger-btn {
-  background: rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.03);
   border: 1px solid var(--border-color);
   border-radius: 10px;
   color: var(--text-primary);
@@ -99,7 +99,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 .drawer-close:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.04);
   color: var(--text-primary);
 }
 
@@ -132,7 +132,7 @@
 }
 
 .drawer-tab:hover {
-  background: rgba(255,255,255,0.04);
+  background: rgba(0,0,0,0.03);
   color: var(--text-primary);
 }
 
@@ -651,13 +651,13 @@
 }
 
 .qty-btn:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.03);
   border-color: var(--border-hover);
   color: var(--accent-gold);
 }
 
 .qty-btn:active {
-  background: rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.06);
   transform: scale(0.92);
 }
 
@@ -683,7 +683,7 @@
 }
 
 .basket-item:hover {
-  background: rgba(255,255,255,0.02);
+  background: rgba(0,0,0,0.015);
 }
 
 .basket-item-info {
@@ -791,7 +791,7 @@
 
 /* ─── Orders Toggle Button ──────────────────────────────────────────── */
 .orders-toggle {
-  background: rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.03);
   border: 1px solid var(--border-color);
   border-radius: 20px;
   color: var(--text-secondary);
@@ -865,7 +865,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 14px;
-  background: rgba(255,255,255,0.02);
+  background: rgba(0,0,0,0.02);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -1043,7 +1043,7 @@
   border-bottom: none;
 }
 .edit-item-row:hover {
-  background: rgba(255,255,255,0.02);
+  background: rgba(0,0,0,0.015);
 }
 
 .edit-item-info {
@@ -1089,7 +1089,7 @@
 
 .edit-item-locked {
   opacity: 0.75;
-  background: rgba(255,255,255,0.02);
+  background: rgba(0,0,0,0.015);
 }
 
 .edit-item-locked-icon {
@@ -1124,7 +1124,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 .edit-cat-tab:hover {
-  background: rgba(255,255,255,0.04);
+  background: rgba(0,0,0,0.03);
   color: var(--text-primary);
 }
 .edit-cat-tab.active {
@@ -1244,7 +1244,7 @@
   transition: var(--transition);
 }
 .sidebar-toggle:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.04);
   color: var(--text-primary);
 }
 
@@ -1276,7 +1276,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 10px;
-  background: rgba(255,255,255,0.03);
+  background: rgba(0,0,0,0.02);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -1297,7 +1297,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border-color);
   gap: 6px;
 }
 .sidebar-item:last-child {

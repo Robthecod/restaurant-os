@@ -1,25 +1,31 @@
-const CACHE_NAME = 'roux-v1';
+const CACHE_NAME = 'chauka-v3';
 
 // Assets to cache on install
 const PRECACHE = [
   '/',
   '/index.html',
-  '/waiter.html',
-  '/kitchen.html',
-  '/manager.html',
+  '/app/hub.html',
+  '/app/waiter.html',
+  '/app/kitchen.html',
+  '/app/manager.html',
+  '/app/customer.html',
   '/css/style.css',
-  '/css/waiter.css',
-  '/css/kitchen.css',
-  '/css/manager.css',
-  '/js/socket-client.js',
-  '/js/waiter.js',
-  '/js/kitchen.js',
-  '/js/manager.js',
+  '/app/css/waiter.css',
+  '/app/css/kitchen.css',
+  '/app/css/manager.css',
+  '/app/css/customer.css',
+  '/app/js/socket-client.js',
+  '/app/js/waiter.js',
+  '/app/js/kitchen.js',
+  '/app/js/manager.js',
+  '/app/js/customer.js',
+  '/app/js/license-client.js',
   '/manifest.json',
 ];
 
 // Install event — cache core assets
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE);
@@ -27,27 +33,30 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate event — clean old caches
+// Activate event — clean old caches & take control immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      );
-    })
+    Promise.all([
+      caches.keys().then((keys) => {
+        return Promise.all(
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key))
+        );
+      }),
+      clients.claim(),
+    ])
   );
 });
 
 // Fetch event — network-first, fallback to cache
 self.addEventListener('fetch', (event) => {
-  // Skip Socket.io and API calls
+  // Skip Socket.io and API calls — don't intercept, let the browser handle normally
   if (
     event.request.url.includes('/socket.io/') ||
     event.request.url.includes('/api/')
   ) {
-    return fetch(event.request);
+    return;
   }
 
   event.respondWith(

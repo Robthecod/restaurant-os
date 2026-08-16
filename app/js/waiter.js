@@ -15,6 +15,7 @@
     editingOrder: null,   // order being edited
     editingItems: [],      // mutable items array during edit
     socketConnected: false,
+    sending: false,          // guard against duplicate order submissions
   };
 
   // ─── DOM References ────────────────────────────────────────────────
@@ -88,6 +89,28 @@
 
     // Misc
     toastContainer: $('#toastContainer'),
+    // 3-dot menu
+    waiterMenuBtn: $('#waiterMenuBtn'),
+    waiterDropdown: $('#waiterDropdown'),
+    waiterRequestIngredient: $('#waiterRequestIngredient'),
+    waiterSendBackDish: $('#waiterSendBackDish'),
+    waiterRefreshOrders: $('#waiterRefreshOrders'),
+    // Ingredient modal
+    waiterIngredientModal: $('#waiterIngredientModal'),
+    waiterIngredientName: $('#waiterIngredientName'),
+    waiterIngredientQty: $('#waiterIngredientQty'),
+    waiterIngredientClose: $('#waiterIngredientClose'),
+    waiterIngredientCancel: $('#waiterIngredientCancel'),
+    waiterIngredientSubmit: $('#waiterIngredientSubmit'),
+    // Send back modal
+    waiterSendBackModal: $('#waiterSendBackModal'),
+    waiterReturnDishName: $('#waiterReturnDishName'),
+    waiterReturnReason: $('#waiterReturnReason'),
+    waiterReturnQty: $('#waiterReturnQty'),
+    waiterReturnAmount: $('#waiterReturnAmount'),
+    waiterSendBackClose: $('#waiterSendBackClose'),
+    waiterSendBackCancel: $('#waiterSendBackCancel'),
+    waiterSendBackSubmit: $('#waiterSendBackSubmit'),
   };
 
   // ─── New DOM refs for sidebar ───
@@ -95,10 +118,10 @@
 
   // ─── Category Labels Map ────────────────────────────────────────────
   const categoryLabels = {
-    starters: '🥟 Starters',
-    mains: '🍛 Mains',
-    desserts: '🍨 Desserts',
-    drinks: '🥤 Drinks',
+    starters: 'Starters',
+    mains: 'Mains',
+    desserts: 'Desserts',
+    drinks: 'Drinks',
   };
 
   // ─── Drawer Functions ────────────────────────────────────────────────
@@ -282,7 +305,7 @@
         (item, idx) => `
         <div class="menu-item ${item.available ? '' : 'unavailable'}" data-id="${item.id}" data-category="${category}" style="animation-delay: ${idx * 30}ms">
           <span class="item-available"></span>
-          <span class="item-emoji">${getItemEmoji(item.name)}</span>
+
           <span class="item-name">${item.name}</span>
           <span class="item-price">₹${item.price.toFixed(2)}</span>
           <span class="item-tap-hint">Tap to customize</span>
@@ -338,7 +361,8 @@
 
   // ─── Send Order ──────────────────────────────────────────────────────
   async function sendOrder() {
-    if (state.basket.length === 0) return;
+    if (state.basket.length === 0 || state.sending) return;
+    state.sending = true;
 
     const items = state.basket.map((b) => ({
       name: b.name,
@@ -364,7 +388,7 @@
       if (!res.ok) throw new Error('Failed to send order');
 
       const order = await res.json();
-      showToast(`<span class="toast-icon">✅</span> <span>Order #${order.id} sent to kitchen!</span>`, 'success');
+      showToast(`Order #${order.id} sent to kitchen!`, 'success');
       state.basket = [];
       updateBasketUI();
       dom.basketModal.classList.remove('active');
@@ -372,10 +396,11 @@
       refreshOrders();
     } catch (err) {
       console.error('Send order error:', err);
-      showToast('<span class="toast-icon">❌</span> <span>Failed to send order. Try again.</span>', 'error');
+      showToast('Failed to send order. Try again.', 'error');
     } finally {
       dom.basketSend.disabled = false;
       dom.basketSend.textContent = 'Send to Kitchen →';
+      state.sending = false;
     }
   }
 
@@ -394,7 +419,6 @@
     if (state.orders.length === 0) {
       dom.ordersList.innerHTML = `
         <div class="orders-empty">
-          <div class="empty-icon">📭</div>
           <div class="empty-title">No orders yet</div>
           <div class="empty-desc">Orders sent to the kitchen will appear here</div>
         </div>
@@ -433,9 +457,8 @@
         <div class="order-item-line">
           <span class="order-item-qty">${item.quantity}×</span>
           <span class="order-item-name">${item.name}</span>
-          ${item.modifiers ? `<span class="order-item-mod">📝 ${item.modifiers}</span>` : ''}
-          <span class="order-item-ind-status badge-status status-${item.status || 'pending'}">
-            ${getStatusLabel(item.status || 'pending')}
+          ${item.modifiers ? `          <span class="order-item-mod">${item.modifiers}</span>` : ''}            <span class="order-item-ind-status badge-status status-${item.status || 'pending'}">
+            ${getStatusLabel(item.status || 'pending').replace(/[^\x00-\x7F]/g, '').trim()}
           </span>
         </div>
       `
@@ -497,14 +520,14 @@
       }
       const data = await res.json();
       if (data.deleted) {
-        showToast(`<span class="toast-icon">🗑️</span> <span>Order #${orderId} deleted (last item removed)</span>`, 'info');
+        showToast(`Order #${orderId} deleted (last item removed)`, 'info');
       } else {
-        showToast(`<span class="toast-icon">🗑️</span> <span>Removed "${itemName}" from order</span>`, 'info');
+        showToast(`Removed "${itemName}" from order`, 'info');
       }
       refreshOrders();
     } catch (err) {
       console.error('Cancel item error:', err);
-      showToast(`<span class="toast-icon">❌</span> <span>${err.message}</span>`, 'error');
+      showToast(`${err.message}`, 'error');
     }
   }
 
@@ -515,11 +538,11 @@
     try {
       const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to cancel order');
-      showToast(`<span class="toast-icon">🗑️</span> <span>Order #${orderId} cancelled</span>`, 'info');
+      showToast(`Order #${orderId} cancelled`, 'info');
       refreshOrders();
     } catch (err) {
       console.error('Cancel order error:', err);
-      showToast('<span class="toast-icon">❌</span> <span>Failed to cancel order</span>', 'error');
+      showToast('Failed to cancel order', 'error');
     }
   }
 
@@ -536,7 +559,7 @@
       refreshOrders();
     } catch (err) {
       console.error('Mark delivered error:', err);
-      showToast('<span class="toast-icon">❌</span> <span>Failed to update order</span>', 'error');
+      showToast('Failed to update order', 'error');
     }
   }
 
@@ -584,7 +607,7 @@
               <div class="edit-item-info">
                 <span class="edit-item-name">${item.name}</span>
                 <span class="edit-item-qty">×${item.quantity}</span>
-                ${item.modifiers ? `<span class="edit-item-mod">📝 ${item.modifiers}</span>` : ''}
+                ${item.modifiers ? `<span class="edit-item-mod">${item.modifiers}</span>` : ''}
                 ${isLocked ? `<span class="edit-item-badge badge-status status-${itemStatus}">${itemStatus}</span>` : ''}
               </div>
               ${isLocked
@@ -664,7 +687,7 @@
     }
 
     renderEditOrderItems();
-    dom.editAddSection.style.display = 'none';      showToast(`<span class="toast-icon">✅</span> <span>Added ${quantity}x ${item.name}</span>`, 'success');
+    dom.editAddSection.style.display = 'none';      showToast(`Added ${quantity}x ${item.name}`, 'success');
   }
 
   async function saveEditOrder() {
@@ -682,12 +705,12 @@
 
       if (!res.ok) throw new Error('Failed to update order');
 
-      showToast(`<span class="toast-icon">✅</span> <span>Order #${state.editingOrder.id} updated</span>`, 'success');
+      showToast(`Order #${state.editingOrder.id} updated`, 'success');
       closeEditOrder();
       refreshOrders();
     } catch (err) {
       console.error('Edit order error:', err);
-      showToast('<span class="toast-icon">❌</span> <span>Failed to save changes</span>', 'error');
+      showToast('Failed to save changes', 'error');
     } finally {
       dom.editOrderSave.disabled = false;
       dom.editOrderSave.textContent = '💾 Save Changes';
@@ -726,7 +749,7 @@
                       ${getStatusLabel(itemStatus)}
                     </span>
                   </div>
-                  ${item.modifiers ? `<span class="sidebar-item-mod">📝 ${item.modifiers}</span>` : ''}
+                  ${item.modifiers ? `          <span class="sidebar-item-mod">${item.modifiers}</span>` : ''}
                 </div>
                 <div class="sidebar-item-right">
                   ${!isLocked
@@ -769,10 +792,10 @@
 
   function getStatusLabel(status) {
     switch (status) {
-      case 'pending': return '⏳ Pending';
-      case 'cooking': return '👨‍🍳 Cooking';
-      case 'ready': return '✅ Ready';
-      case 'delivered': return '📦 Delivered';
+      case 'pending': return 'Pending';
+      case 'cooking': return 'Cooking';
+      case 'ready': return 'Ready';
+      case 'delivered': return 'Delivered';
       default: return status;
     }
   }
@@ -817,88 +840,7 @@
 
   // ─── Emoji Map ───────────────────────────────────────────────────────
   function getItemEmoji(name) {
-    const lower = name.toLowerCase();
-    const specific = {
-      'paneer butter masala': '🍛',
-      'paneer tikka masala': '🍛',
-      'paneer tikka': '🧀',
-      'chilli paneer': '🧀',
-      'palak paneer': '🧀',
-      'shahi paneer': '🧀',
-      'dahi ke kabab': '🥙',
-      'hara bhara kabab': '🥙',
-      'veg seekh kabab': '🥙',
-      'masala spring rolls': '🥟',
-      'spinach & corn soup': '🍜',
-      'tomato basil soup': '🍜',
-      'cheese chilli toast': '🧀',
-      'crispy corn': '🌽',
-      'sweet potato fries': '🍟',
-      'garlic bread': '🍞',
-      'nacho supreme': '🧀',
-      'kadai vegetable': '🍲',
-      'mix veg curry': '🍲',
-      'malai kofta': '🧆',
-      'gulab jamun': '🍡',
-      'gajar ka halwa': '🍮',
-      'brownie with ice cream': '🍫',
-      'mango mousse': '🍮',
-      'fresh fruit bowl': '🍎',
-      'ice cream': '🍦',
-      'sizzling brownie': '🍫',
-      'masala chai': '🫖',
-      'cold coffee': '☕',
-      'mango lassi': '🥭',
-      'fresh lime soda': '🍋',
-      'fruit smoothie': '🥤',
-      'coconut water': '🥥',
-      'soft drinks': '🥤',
-      'mint lemonade': '🍋',
-      'iced tea': '🧋',
-      'hot chocolate': '☕',
-      'fresh juice': '🧃',
-    };
-    for (const [key, emoji] of Object.entries(specific)) {
-      if (lower.includes(key)) return emoji;
-    }
-    const generic = {
-      'noodles': '🍜',
-      'pasta': '🍝',
-      'biryani': '🍚',
-      'pulao': '🍚',
-      'fried rice': '🍚',
-      'rice': '🍚',
-      'dal': '🥣',
-      'soup': '🍜',
-      'spring roll': '🥟',
-      'manchurian': '🥟',
-      'mushroom': '🍄',
-      'toast': '🍞',
-      'paratha': '🫓',
-      'naan': '🫓',
-      'thali': '🍱',
-      'sizzler': '🔥',
-      'kabab': '🥙',
-      'halwa': '🍮',
-      'brownie': '🍫',
-      'mousse': '🍮',
-      'tiramisu': '☕',
-      'rasmalai': '🥛',
-      'cheesecake': '🍰',
-      'kulfi': '🍦',
-      'phirni': '🍮',
-      'chai': '🫖',
-      'coffee': '☕',
-      'lassi': '🥤',
-      'buttermilk': '🥛',
-      'lemonade': '🍋',
-      'juice': '🧃',
-      'paneer': '🧀',
-    };
-    for (const [key, emoji] of Object.entries(generic)) {
-      if (lower.includes(key)) return emoji;
-    }
-    return '🍽️';
+    return '';
   }
 
   // ─── Toast Notifications ─────────────────────────────────────────────
@@ -965,7 +907,7 @@
             document.title = `Waiter Pad — Table ${newTable}`;
             // Re-fetch orders for the new table
             refreshOrders();
-            showToast(`<span class="toast-icon">📋</span> <span>Switched to Table ${newTable}</span>`, 'info');
+            showToast(`Switched to Table ${newTable}`, 'info');
           } else {
             dom.tableBadge.textContent = `Table ${currentTable}`;
           }
@@ -1065,7 +1007,7 @@
       const modifiers = dom.modifierInput.value.trim();
       addToBasket(state.selectedItem, quantity, modifiers);
       closeModifierModal();
-      showToast(`<span class="toast-icon">✅</span> <span>Added ${quantity}x ${state.selectedItem.name}</span>`, 'success');
+      showToast(`Added ${quantity}x ${state.selectedItem.name}`, 'success');
     });
 
     // Modal Skip button
@@ -1161,10 +1103,82 @@
       if (e.target === dom.editOrderModal) closeEditOrder();
     });
 
+    // ─── 3-Dot Menu ───
+    dom.waiterMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = dom.waiterDropdown.style.display === 'block';
+      dom.waiterDropdown.style.display = isOpen ? 'none' : 'block';
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.waiter-actions-menu')) {
+        dom.waiterDropdown.style.display = 'none';
+      }
+    });
+
+    // Report Missing Ingredient
+    dom.waiterRequestIngredient.addEventListener('click', () => {
+      dom.waiterDropdown.style.display = 'none';
+      dom.waiterIngredientName.value = '';
+      dom.waiterIngredientQty.value = '';
+      dom.waiterIngredientModal.classList.add('active');
+      setTimeout(() => dom.waiterIngredientName.focus(), 100);
+    });
+
+    function closeIngredientModal() {
+      dom.waiterIngredientModal.classList.remove('active');
+    }
+    dom.waiterIngredientClose.addEventListener('click', closeIngredientModal);
+    dom.waiterIngredientCancel.addEventListener('click', closeIngredientModal);
+    dom.waiterIngredientModal.addEventListener('click', (e) => {
+      if (e.target === dom.waiterIngredientModal) closeIngredientModal();
+    });
+
+    dom.waiterIngredientSubmit.addEventListener('click', submitIngredientRequest);
+    dom.waiterIngredientQty.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitIngredientRequest();
+    });
+
+    // Refresh Orders
+    dom.waiterRefreshOrders.addEventListener('click', () => {
+      dom.waiterDropdown.style.display = 'none';
+      refreshOrders();
+      showToast('🔄 Orders refreshed', 'success');
+    });
+
+    // Send Back Dish
+    dom.waiterSendBackDish.addEventListener('click', () => {
+      dom.waiterDropdown.style.display = 'none';
+      dom.waiterReturnDishName.value = '';
+      dom.waiterReturnReason.value = '';
+      dom.waiterReturnQty.value = '1';
+      dom.waiterReturnAmount.value = '';
+      dom.waiterSendBackModal.classList.add('active');
+      setTimeout(() => dom.waiterReturnDishName.focus(), 100);
+    });
+
+    function closeSendBackModal() {
+      dom.waiterSendBackModal.classList.remove('active');
+    }
+    dom.waiterSendBackClose.addEventListener('click', closeSendBackModal);
+    dom.waiterSendBackCancel.addEventListener('click', closeSendBackModal);
+    dom.waiterSendBackModal.addEventListener('click', (e) => {
+      if (e.target === dom.waiterSendBackModal) closeSendBackModal();
+    });
+
+    dom.waiterSendBackSubmit.addEventListener('click', submitReturnedDish);
+    dom.waiterReturnAmount.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitReturnedDish();
+    });
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (dom.editOrderModal.classList.contains('active')) {
+        if (dom.waiterSendBackModal.classList.contains('active')) {
+          closeSendBackModal();
+        } else if (dom.waiterIngredientModal.classList.contains('active')) {
+          closeIngredientModal();
+        } else if (dom.editOrderModal.classList.contains('active')) {
           closeEditOrder();
         } else if (dom.ordersModal.classList.contains('active')) {
           closeOrdersPanel();
@@ -1174,6 +1188,85 @@
         }
       }
     });
+  }
+
+  // ─── Ingredient Request ──────────────────────────────────────────────
+  async function submitIngredientRequest() {
+    const ingredient = dom.waiterIngredientName.value.trim();
+    const quantity = dom.waiterIngredientQty.value.trim();
+
+    if (!ingredient || !quantity) {
+      showToast('Please fill in both fields', 'error');
+      return;
+    }
+
+    dom.waiterIngredientSubmit.disabled = true;
+    dom.waiterIngredientSubmit.textContent = '⏳ Sending...';
+
+    try {
+      const res = await fetch('/api/ingredient-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ingredient,
+          quantity,
+          requestedBy: `Waiter (Table ${state.tableNumber})`,
+          tableNumber: state.tableNumber,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to submit request');
+
+      showToast(`✅ Requested ${ingredient} — ${quantity}`, 'success');
+      dom.waiterIngredientModal.classList.remove('active');
+    } catch (err) {
+      console.error('Ingredient request error:', err);
+      showToast('Failed to submit request', 'error');
+    } finally {
+      dom.waiterIngredientSubmit.disabled = false;
+      dom.waiterIngredientSubmit.textContent = 'Submit Request';
+    }
+  }
+
+  // ─── Returned Dish ───────────────────────────────────────────────────
+  async function submitReturnedDish() {
+    const dishName = dom.waiterReturnDishName.value.trim();
+    const reason = dom.waiterReturnReason.value.trim() || 'Incorrectly prepared';
+    const quantity = parseInt(dom.waiterReturnQty.value) || 1;
+    const amount = parseFloat(dom.waiterReturnAmount.value);
+
+    if (!dishName || isNaN(amount) || amount <= 0) {
+      showToast('Please enter dish name and amount', 'error');
+      return;
+    }
+
+    dom.waiterSendBackSubmit.disabled = true;
+    dom.waiterSendBackSubmit.textContent = '⏳ Reporting...';
+
+    try {
+      const res = await fetch('/api/returned-dish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dishName,
+          quantity,
+          reason,
+          amount,
+          tableNumber: state.tableNumber,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to report');
+
+      showToast(`↩️ Reported ${quantity}x ${dishName} as returned (₹${(amount * quantity).toFixed(2)})`, 'success');
+      dom.waiterSendBackModal.classList.remove('active');
+    } catch (err) {
+      console.error('Returned dish error:', err);
+      showToast('Failed to report returned dish', 'error');
+    } finally {
+      dom.waiterSendBackSubmit.disabled = false;
+      dom.waiterSendBackSubmit.textContent = '📋 Report Return';
+    }
   }
 
   // ─── Basket Modal ────────────────────────────────────────────────────

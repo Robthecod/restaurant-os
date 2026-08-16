@@ -138,7 +138,6 @@
       console.error('Failed to fetch menu:', err);
       dom.menuLoading.innerHTML = `
         <div class="customer-error-state">
-          <span class="error-icon">📡</span>
           <div class="error-text">Couldn't load the menu.</div>
           <div class="error-sub">Make sure you're connected to the restaurant's network.</div>
           <button class="error-retry" onclick="window.location.reload()">Try Again</button>
@@ -151,13 +150,12 @@
   function renderCategories() {
     if (!state.menu) return;
     const cats = Object.keys(state.menu.categories);
-    const catIcons = { starters: '🥟', mains: '🍛', desserts: '🍨', drinks: '🥤' };
+
     dom.categories.innerHTML = cats
       .map(
         (cat) => `
         <button class="customer-cat-tab ${cat === state.currentCategory ? 'active' : ''}"
                 data-category="${cat}">
-          <span class="cat-icon">${catIcons[cat] || '🍽️'}</span>
           <span class="cat-label">${capitalize(cat)}</span>
         </button>
       `
@@ -180,7 +178,7 @@
              data-category="${state.currentCategory}"
              style="animation-delay: ${idx * 35}ms">
           <span class="item-available"></span>
-          <span class="item-emoji">${getItemEmoji(item.name)}</span>
+
           <span class="item-name">${item.name}</span>
           <span class="item-price">₹${item.price.toFixed(2)}</span>
           <span class="item-tap-hint">Tap to customize</span>
@@ -244,7 +242,7 @@
     }));
 
     dom.placeOrder.disabled = true;
-    dom.placeOrder.textContent = '⏳ Sending...';
+    dom.placeOrder.textContent = 'Sending...';
 
     try {
       const res = await fetch('/api/orders/customer', {
@@ -271,7 +269,7 @@
       state.cart = [];
       updateCartUI();
 
-      showToast(`<span class="toast-icon">🎉</span> <span>Order #${order.id} placed! The kitchen has it.</span>`, 'success');
+      showToast(`Order #${order.id} placed! The kitchen has it.`, 'success');
 
       // After 3 seconds, offer to track the order
       setTimeout(() => {
@@ -279,10 +277,10 @@
       }, 3000);
     } catch (err) {
       console.error('Place order error:', err);
-      showToast('<span class="toast-icon">❌</span> <span>Could not place order. Try again!</span>', 'error');
+      showToast('Could not place order. Try again!', 'error');
     } finally {
       dom.placeOrder.disabled = false;
-      dom.placeOrder.textContent = '🛒 Place Order';
+      dom.placeOrder.textContent = 'Place Order';
     }
   }
 
@@ -303,9 +301,9 @@
 
   function updateStatusTimeline(order) {
     const allStatuses = [
-      { key: 'pending', icon: '⏳', label: 'Order Received', sub: 'Kitchen is looking at it' },
-      { key: 'cooking', icon: '👨‍🍳', label: 'Being Prepared', sub: 'Your food is being cooked' },
-      { key: 'ready', icon: '✅', label: 'Ready to Serve', sub: 'Coming your way shortly!' },
+      { key: 'pending', icon: '', label: 'Order Received', sub: 'Kitchen is looking at it' },
+      { key: 'cooking', icon: '', label: 'Being Prepared', sub: 'Your food is being cooked' },
+      { key: 'ready', icon: '', label: 'Ready to Serve', sub: 'Coming your way shortly!' },
     ];
 
     const currentIdx = allStatuses.findIndex((s) => s.key === order.status) + 1;
@@ -326,16 +324,12 @@
 
     // Update status icon
     if (order.status === 'delivered') {
-      dom.statusIcon.textContent = '🎉';
       dom.statusTitle.textContent = 'Enjoy your meal!';
     } else if (activeIdx === 2) {
-      dom.statusIcon.textContent = '✅';
       dom.statusTitle.textContent = 'Almost there!';
     } else if (activeIdx === 1) {
-      dom.statusIcon.textContent = '👨‍🍳';
       dom.statusTitle.textContent = 'Being prepared...';
     } else {
-      dom.statusIcon.textContent = '⏳';
       dom.statusTitle.textContent = 'Order received!';
     }
 
@@ -346,7 +340,7 @@
         else if (idx === activeIdx) cls = 'active';
         return `
           <div class="status-step ${cls}">
-            <span class="step-icon">${idx < activeIdx ? '✅' : s.icon}</span>
+            <span class="step-icon">${idx < activeIdx ? 'Done' : s.icon}</span>
             <div>
               <span class="step-text">${s.label}</span>
               <span class="step-sub">${idx < activeIdx ? 'Completed' : s.sub}</span>
@@ -374,7 +368,7 @@
   // ─── Modal ───────────────────────────────────────────────────────────
   function openItemModal(item, category) {
     state.selectedItem = { ...item, category };
-    dom.modalIcon.textContent = getItemEmoji(item.name);
+
     dom.modalItemName.textContent = item.name;
     dom.modalItemPrice.textContent = `₹${item.price.toFixed(2)}`;
     dom.modalModifier.value = '';
@@ -389,97 +383,7 @@
   }
 
   function getItemEmoji(name) {
-    const lower = name.toLowerCase();
-
-    // Multi-word specific matches (checked first to avoid generic false matches)
-    const specific = {
-      'paneer butter masala': '🍛',
-      'paneer tikka masala': '🍛',
-      'paneer tikka': '🧀',
-      'chilli paneer': '🧀',
-      'palak paneer': '🧀',
-      'shahi paneer': '🧀',
-      'dahi ke kabab': '🥙',
-      'hara bhara kabab': '🥙',
-      'veg seekh kabab': '🥙',
-      'veggie seekh kabab': '🥙',
-      'masala spring rolls': '🥟',
-      'spinach & corn soup': '🍜',
-      'tomato basil soup': '🍜',
-      'cheese chilli toast': '🧀',
-      'crispy corn': '🌽',
-      'sweet potato fries': '🍟',
-      'garlic bread': '🍞',
-      'nacho supreme': '🧀',
-      'kadai vegetable': '🍲',
-      'mix veg curry': '🍲',
-      'malai kofta': '🧆',
-      'gulab jamun': '🍡',
-      'gajar ka halwa': '🍮',
-      'brownie with ice cream': '🍫',
-      'mango mousse': '🍮',
-      'fresh fruit bowl': '🍎',
-      'ice cream': '🍦',
-      'sizzling brownie': '🍫',
-      'masala chai': '🫖',
-      'cold coffee': '☕',
-      'mango lassi': '🥭',
-      'fresh lime soda': '🍋',
-      'fruit smoothie': '🥤',
-      'coconut water': '🥥',
-      'soft drinks': '🥤',
-      'mint lemonade': '🍋',
-      'iced tea': '🧋',
-      'hot chocolate': '☕',
-      'fresh juice': '🧃',
-    };
-
-    for (const [key, emoji] of Object.entries(specific)) {
-      if (lower.includes(key)) return emoji;
-    }
-
-    // Generic keyword matches (fallback)
-    const generic = {
-      'noodles': '🍜',
-      'pasta': '🍝',
-      'biryani': '🍚',
-      'pulao': '🍚',
-      'fried rice': '🍚',
-      'rice': '🍚',
-      'dal': '🥣',
-      'soup': '🍜',
-      'spring roll': '🥟',
-      'manchurian': '🥟',
-      'mushroom': '🍄',
-      'toast': '🍞',
-      'paratha': '🫓',
-      'naan': '🫓',
-      'thali': '🍱',
-      'sizzler': '🔥',
-      'kabab': '🥙',
-      'kebab': '🥙',
-      'halwa': '🍮',
-      'brownie': '🍫',
-      'mousse': '🍮',
-      'tiramisu': '☕',
-      'rasmalai': '🥛',
-      'cheesecake': '🍰',
-      'kulfi': '🍦',
-      'phirni': '🍮',
-      'chai': '🫖',
-      'coffee': '☕',
-      'lassi': '🥤',
-      'buttermilk': '🥛',
-      'lemonade': '🍋',
-      'juice': '🧃',
-      'paneer': '🧀',
-    };
-
-    for (const [key, emoji] of Object.entries(generic)) {
-      if (lower.includes(key)) return emoji;
-    }
-
-    return '🍽️';
+    return '';
   }
 
   // ─── Toast ───────────────────────────────────────────────────────────
@@ -552,7 +456,7 @@
       const modifiers = dom.modalModifier.value.trim();
       addToCart(state.selectedItem, quantity, modifiers);
       closeItemModal();
-      showToast(`<span class="toast-icon">✅</span> <span>Added ${quantity}x ${state.selectedItem.name}</span>`, 'success');
+      showToast(`Added ${quantity}x ${state.selectedItem.name}`, 'success');
     });
 
     // Modal Skip

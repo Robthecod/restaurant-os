@@ -6,6 +6,7 @@
     menu: null,
     editingItem: null, // { category, item }
     socketConnected: false,
+    openRequests: [], // open ingredient requests
   };
 
   // ─── DOM References ────────────────────────────────────────────────
@@ -23,6 +24,7 @@
     menuPreview: $('#menuPreview'),
     qsTotal: $('#qsTotal'),
     qsActive: $('#qsActive'),
+    qsCategories: $('#qsCategories'),
     editModal: $('#editModal'),
     editName: $('#editName'),
     editPrice: $('#editPrice'),
@@ -31,6 +33,9 @@
     editSave: $('#editSave'),
     toastContainer: $('#toastContainer'),
     mgrSubtitle: $('#mgrSubtitle'),
+    newCategoryKey: $('#newCategoryKey'),
+    newCategoryName: $('#newCategoryName'),
+    addCategoryBtn: $('#addCategoryBtn'),
     menuView: $('#menuView'),
     analyticsView: $('#analyticsView'),
     analyticsLoading: $('#analyticsLoading'),
@@ -39,6 +44,14 @@
     analyticsPeriods: $('#analyticsPeriods'),
     topDishesList: $('#topDishesList'),
     timeSlotsList: $('#timeSlotsList'),
+    wastageTotal: $('#wastageTotal'),
+    wastageCount: $('#wastageCount'),
+    notifBell: $('#notifBell'),
+    notifBadge: $('#notifBadge'),
+    notifContainer: $('#notifContainer'),
+    notifDropdown: $('#notifDropdown'),
+    notifDropdownBody: $('#notifDropdownBody'),
+    notifDropdownClose: $('#notifDropdownClose'),
   };
 
   // ─── Init ────────────────────────────────────────────────────────────
@@ -46,6 +59,7 @@
     setupSocket();
     fetchMenu();
     fetchAnalytics();
+    fetchOpenRequests();
     setupEventListeners();
   }
 
@@ -59,6 +73,8 @@
       dom.connDot.className = 'connection-dot connected';
       dom.syncStatus.classList.remove('disconnected');
       dom.syncLabel.textContent = 'Connected';
+      // Re-fetch open requests on reconnect to stay in sync
+      fetchOpenRequests();
     });
 
     client.on('_disconnected', () => {
@@ -72,7 +88,27 @@
       state.menu = menu;
       renderPreview();
       updateStats();
-      showToast('📡 Menu synced to all devices', 'info');
+      showToast('Menu synced to all devices', 'info');
+    });
+
+    // ─── Notification Socket Events ────────────────────────────────────
+    client.on('new_ingredient_request', (request) => {
+      // Add to our list if it's open
+      if (request.status === 'open') {
+        state.openRequests.unshift(request);
+        updateBadge();
+        updateDropdown();
+        // Only show toast if dropdown is closed (to avoid spam when already viewing)
+        if (dom.notifDropdown.style.display === 'none') {
+          showToast(`📦 Request: ${request.ingredient} — ${request.quantity} (${request.requestedBy})`, 'info');
+        }
+      }
+    });
+
+    client.on('ingredient_request_resolved', (request) => {
+      state.openRequests = state.openRequests.filter((r) => r.id !== request.id);
+      updateBadge();
+      updateDropdown();
     });
   }
 
@@ -87,7 +123,6 @@
       console.error('Failed to fetch menu:', err);
       dom.menuPreview.innerHTML = `
         <div class="preview-empty">
-          <div class="empty-icon">⚠️</div>
           <div>Failed to load menu. <button class="btn btn-secondary btn-sm" onclick="location.reload()">Retry</button></div>
         </div>
       `;
@@ -98,7 +133,7 @@
   async function addItem(category, name, price) {
     const submitBtn = dom.menuForm.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
-    submitBtn.textContent = '⏳ Adding...';
+    submitBtn.textContent = 'Adding...';
 
     try {
       const res = await fetch('/api/menu', {
@@ -113,23 +148,23 @@
       }
 
       const item = await res.json();
-      showToast(`✅ Added "${item.name}" to ${category}`, 'success');
+      showToast(`Added "${item.name}" to ${category}`, 'success');
       dom.itemName.value = '';
       dom.itemPrice.value = '';
       dom.itemName.focus();
     } catch (err) {
       console.error('Add item error:', err);
-      showToast(`❌ ${err.message}`, 'error');
+      showToast(`${err.message}`, 'error');
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = '➕ Add to Menu';
+      submitBtn.textContent = '+ Add to Menu';
     }
   }
 
   // ─── Update Item ─────────────────────────────────────────────────────
   async function updateItem(category, itemId, data) {
     dom.editSave.disabled = true;
-    dom.editSave.textContent = '⏳ Saving...';
+    dom.editSave.textContent = 'Saving...';
 
     try {
       const res = await fetch(`/api/menu/${itemId}`, {
@@ -141,15 +176,53 @@
       if (!res.ok) throw new Error('Failed to update item');
 
       const item = await res.json();
-      showToast(`✅ Updated "${item.name}"`, 'success');
+      showToast(`Updated "${item.name}"`, 'success');
       dom.editModal.classList.remove('active');
       state.editingItem = null;
     } catch (err) {
       console.error('Update item error:', err);
-      showToast(`❌ ${err.message}`, 'error');
+      showToast(`${err.message}`, 'error');
     } finally {
       dom.editSave.disabled = false;
-      dom.editSave.textContent = '💾 Save Changes';
+      dom.editSave.textContent = 'Save Changes';
+    }
+  }
+
+  // ─── Add Category ─────────────────────────────────────────────────────
+  async function addCategory() {
+    const key = dom.newCategoryKey.value.trim().toLowerCase().replace(/\s+/g, '_');
+    const name = dom.newCategoryName.value.trim();
+
+    if (!key || !name) {
+      showToast('Please enter both a key and display name', 'error');
+      return;
+    }
+
+    dom.addCategoryBtn.disabled = true;
+    dom.addCategoryBtn.textContent = 'Adding...';
+
+    try {
+      const res = await fetch('/api/menu/category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, name }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to add category');
+      }
+
+      showToast(`Added category "${name}"`, 'success');
+      dom.newCategoryKey.value = '';
+      dom.newCategoryName.value = '';
+      dom.newCategoryKey.focus();
+    } catch (err) {
+      console.error('Add category error:', err);
+      showToast(`${err.message}`, 'error');
+    } finally {
+      dom.addCategoryBtn.disabled = false;
+      dom.addCategoryBtn.textContent = '+ Add Category';
     }
   }
 
@@ -160,23 +233,18 @@
     try {
       const res = await fetch(`/api/menu/${itemId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete item');
-      showToast('🗑️ Item deleted', 'info');
+      showToast('Item deleted', 'info');
     } catch (err) {
       console.error('Delete item error:', err);
-      showToast(`❌ ${err.message}`, 'error');
+      showToast(`${err.message}`, 'error');
     }
   }
 
   // ─── Render Menu Preview ─────────────────────────────────────────────
-  const categoryEmojis = {
-    starters: '🥟',
-    mains: '🍛',
-    drinks: '🥤',
-  };
-
   const categoryLabels = {
     starters: 'Starters',
     mains: 'Mains',
+    desserts: 'Desserts',
     drinks: 'Drinks',
   };
 
@@ -194,13 +262,12 @@
     let html = '';
     for (const cat of categories) {
       const items = state.menu.categories[cat];
-      const emoji = categoryEmojis[cat] || '📋';
       const label = categoryLabels[cat] || cat;
 
       html += `
         <div class="preview-category">
           <div class="preview-category-header">
-            <h3>${emoji} ${label}</h3>
+            <h3>${label}</h3>
             <span class="preview-category-count">${items.length} item${items.length !== 1 ? 's' : ''}</span>
           </div>
           <div class="preview-items">
@@ -219,8 +286,8 @@
                   <div style="display:flex;align-items:center;">
                     <span class="preview-item-price">₹${item.price.toFixed(2)}</span>
                     <span class="preview-item-actions">
-                      <button class="edit-btn" data-category="${cat}" data-id="${item.id}" title="Edit">✏️</button>
-                      <button class="delete-btn" data-category="${cat}" data-id="${item.id}" title="Delete">🗑️</button>
+                      <button class="edit-btn" data-category="${cat}" data-id="${item.id}" title="Edit">Edit</button>
+                      <button class="delete-btn" data-category="${cat}" data-id="${item.id}" title="Delete">Delete</button>
                     </span>
                   </div>
                 </div>
@@ -258,6 +325,7 @@
     const allItems = categories.flatMap((cat) => state.menu.categories[cat]);
     dom.qsTotal.textContent = allItems.length;
     dom.qsActive.textContent = allItems.filter((i) => i.available).length;
+    dom.qsCategories.textContent = categories.length;
   }
 
   // ─── Edit Modal ──────────────────────────────────────────────────────
@@ -307,6 +375,97 @@
     }
   }
 
+  // ─── Notification Functions ───────────────────────────────────────────
+  async function fetchOpenRequests() {
+    try {
+      const res = await fetch('/api/ingredient-requests');
+      if (res.ok) {
+        state.openRequests = await res.json();
+        updateBadge();
+      }
+    } catch (err) {
+      console.error('Failed to fetch open requests:', err);
+    }
+  }
+
+  function updateBadge() {
+    const count = state.openRequests.length;
+    dom.notifBadge.textContent = count;
+    dom.notifBadge.style.display = count > 0 ? 'flex' : 'none';
+    dom.notifBell.classList.toggle('has-requests', count > 0);
+  }
+
+  function updateDropdown() {
+    const requests = state.openRequests;
+
+    if (requests.length === 0) {
+      dom.notifDropdownBody.innerHTML = '<div class="notif-empty">No pending requests</div>';
+      return;
+    }
+
+    dom.notifDropdownBody.innerHTML = requests
+      .map(
+        (r) => `
+        <div class="notif-item new">
+          <div class="notif-item-icon">📦</div>
+          <div class="notif-item-body">
+            <div class="notif-item-title">${escapeHtml(r.ingredient)} — ${escapeHtml(r.quantity)}</div>
+            <div class="notif-item-meta">Requested by ${escapeHtml(r.requestedBy)}${r.tableNumber ? ' (Table ' + escapeHtml(r.tableNumber) + ')' : ''}</div>
+            <div class="notif-item-actions">
+              <button class="notif-resolve-btn" data-request-id="${r.id}">✓ Resolved</button>
+            </div>
+          </div>
+        </div>
+      `
+      )
+      .join('');
+
+    // Attach resolve handlers
+    dom.notifDropdownBody.querySelectorAll('.notif-resolve-btn').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        const id = parseInt(e.target.dataset.requestId);
+        e.target.disabled = true;
+        e.target.textContent = 'Resolving...';
+        await resolveRequest(id);
+      });
+    });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  async function resolveRequest(id) {
+    try {
+      const res = await fetch(`/api/ingredient-requests/${id}/resolve`, { method: 'PATCH' });
+      if (res.ok) {
+        state.openRequests = state.openRequests.filter((r) => r.id !== id);
+        updateBadge();
+        updateDropdown();
+        showToast('✅ Request marked as resolved', 'success');
+      } else {
+        showToast('Failed to resolve request', 'error');
+      }
+    } catch (err) {
+      console.error('Resolve request error:', err);
+      showToast('Failed to resolve request', 'error');
+    }
+  }
+
+  function toggleDropdown() {
+    const isOpen = dom.notifDropdown.style.display !== 'none';
+    dom.notifDropdown.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) {
+      updateDropdown(); // Refresh when opening
+    }
+  }
+
+  function closeDropdown() {
+    dom.notifDropdown.style.display = 'none';
+  }
+
   // ─── Fetch Analytics ─────────────────────────────────────────────────
   async function fetchAnalytics() {
     dom.analyticsLoading.style.display = '';
@@ -322,7 +481,6 @@
       console.error('Failed to fetch analytics:', err);
       dom.analyticsLoading.innerHTML = `
         <div class="preview-empty">
-          <div class="empty-icon">⚠️</div>
           <div>Failed to load analytics. <button class="btn btn-secondary btn-sm" onclick="location.reload()">Retry</button></div>
         </div>
       `;
@@ -335,28 +493,32 @@
     renderPeriods(data.periods);
     renderTopDishes(data.topDishes);
     renderTimeSlots(data.timeSlots);
+    renderWastage(data.summary);
+  }
+
+  function renderWastage(summary) {
+    const totalWastage = summary.totalWastage || 0;
+    const totalReturns = summary.totalReturns || 0;
+    if (dom.wastageTotal) {
+      dom.wastageTotal.textContent = `₹${totalWastage.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    }
+    if (dom.wastageCount) {
+      dom.wastageCount.textContent = totalReturns;
+    }
   }
 
   function renderSummary(summary) {
-    dom.analyticsSummary.innerHTML = `
-      <div class="analytics-stat-card highlight">
-        <span class="analytics-stat-icon">💰</span>
-        <span class="analytics-stat-value">₹${summary.totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+    dom.analyticsSummary.innerHTML = `        <div class="analytics-stat-card highlight">
+          <span class="analytics-stat-value">₹${summary.totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
         <span class="analytics-stat-label">Total Revenue</span>
-      </div>
-      <div class="analytics-stat-card">
-        <span class="analytics-stat-icon">📦</span>
-        <span class="analytics-stat-value">${summary.totalOrders}</span>
+      </div>        <div class="analytics-stat-card">
+          <span class="analytics-stat-value">${summary.totalOrders}</span>
         <span class="analytics-stat-label">Orders Completed</span>
-      </div>
-      <div class="analytics-stat-card">
-        <span class="analytics-stat-icon">🍽️</span>
-        <span class="analytics-stat-value">${summary.totalItemsSold}</span>
+      </div>        <div class="analytics-stat-card">
+          <span class="analytics-stat-value">${summary.totalItemsSold}</span>
         <span class="analytics-stat-label">Items Sold</span>
-      </div>
-      <div class="analytics-stat-card">
-        <span class="analytics-stat-icon">📊</span>
-        <span class="analytics-stat-value">₹${summary.averageOrderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+      </div>        <div class="analytics-stat-card">
+          <span class="analytics-stat-value">₹${summary.averageOrderValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
         <span class="analytics-stat-label">Avg Order Value</span>
       </div>
     `;
@@ -443,6 +605,21 @@
       tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
 
+    // Add category
+    dom.addCategoryBtn.addEventListener('click', addCategory);
+    dom.newCategoryKey.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        dom.newCategoryName.focus();
+      }
+    });
+    dom.newCategoryName.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addCategory();
+      }
+    });
+
     // Add item form
     dom.menuForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -451,7 +628,7 @@
       const price = parseFloat(dom.itemPrice.value);
 
       if (!name || isNaN(price) || price <= 0) {
-        showToast('⚠️ Please fill in all fields correctly', 'error');
+        showToast('Please fill in all fields correctly', 'error');
         return;
       }
 
@@ -467,7 +644,7 @@
       const available = dom.editAvailable.checked;
 
       if (!name || isNaN(price) || price <= 0) {
-        showToast('⚠️ Invalid values', 'error');
+        showToast('Invalid values', 'error');
         return;
       }
 
@@ -484,7 +661,26 @@
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeEditModal();
+      if (e.key === 'Escape') {
+        closeEditModal();
+        closeDropdown();
+      }
+    });
+
+    // Notification bell toggle
+    dom.notifBell.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleDropdown();
+    });
+
+    // Notification dropdown close
+    dom.notifDropdownClose.addEventListener('click', closeDropdown);
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!dom.notifContainer.contains(e.target)) {
+        closeDropdown();
+      }
     });
   }
 

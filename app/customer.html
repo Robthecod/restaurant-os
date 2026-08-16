@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Menu — Roux</title>
+  <title>Menu — Chauka</title>
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/customer.css">
+  <link rel="stylesheet" href="/app/css/customer.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -17,8 +17,8 @@
   <!-- ─── Header ──────────────────────────────────────────────────── -->
   <header class="customer-header">
     <div class="customer-brand">
-      <span class="customer-logo">🥘</span>
-      <span class="customer-brand-text">Roux</span>
+      <span class="customer-logo" style="font-weight:bold;font-size:1.3rem;">R</span>
+      <span class="customer-brand-text">Chauka</span>
     </div>
     <div style="display:flex;align-items:center;gap:12px;">
       <span class="customer-table-badge" id="custTableBadge">Table 01</span>
@@ -30,10 +30,9 @@
 
   <!-- ─── Overview ────────────────────────────────────────────────── -->
   <div class="customer-overview" id="custOverview">
-    <span class="emoji-decor">🍽️</span>
-    <h1>Welcome to Roux!</h1>
+    <h1>Welcome to Chauka!</h1>
     <p>Browse our menu, customize your order, and
-       <br>we'll take care of the rest. 🧑‍🍳</p>
+       <br>we'll take care of the rest.</p>
   </div>
 
   <!-- ─── Category Tabs ───────────────────────────────────────────── -->
@@ -56,7 +55,7 @@
       <span class="customer-cart-total" id="custCartTotal">₹0.00</span>
     </div>
     <button class="customer-cart-place-order" id="custPlaceOrder" disabled>
-      🛒 Place Order
+      Place Order
     </button>
   </div>
 
@@ -66,7 +65,7 @@
       <div class="customer-modal-handle"></div>
 
       <div class="customer-modal-header">
-        <span class="customer-modal-icon" id="custModalIcon">🍽️</span>
+
         <div class="customer-modal-header-text">
           <h3 id="custModalItemName">Item Name</h3>
           <div class="price" id="custModalItemPrice">₹0.00</div>
@@ -76,10 +75,10 @@
       <div class="customer-modal-body">
         <label>Special instructions</label>
         <div class="customer-quick-mods">
-          <button class="customer-qmod" data-mod="No onions">🧅 No onions</button>
-          <button class="customer-qmod" data-mod="Extra spicy">🌶️ Extra spicy</button>
-          <button class="customer-qmod" data-mod="Less oil">🫒 Less oil</button>
-          <button class="customer-qmod" data-mod="Well done">🔥 Well done</button>
+          <button class="customer-qmod" data-mod="No onions">No onions</button>
+          <button class="customer-qmod" data-mod="Extra spicy">Extra spicy</button>
+          <button class="customer-qmod" data-mod="Less oil">Less oil</button>
+          <button class="customer-qmod" data-mod="Well done">Well done</button>
         </div>
         <textarea id="custModalModifier" placeholder="Anything else? (e.g., no cheese, extra sauce...)"></textarea>
 
@@ -99,30 +98,29 @@
 
   <!-- ─── Confirmation Screen ─────────────────────────────────────── -->
   <div class="customer-confirmation" id="custConfirmation" style="display:none;">
-    <span class="check-icon">✅</span>
-    <h2>Order Placed! 🎉</h2>
+    <h2>Order Placed!</h2>
     <div class="order-num" id="custConfirmOrderNum">#0</div>
     <p>
       Your order is on its way to the kitchen.<br>
       Sit back, relax, and we'll bring it to you!
     </p>
     <button class="track-btn btn" style="display:none;margin-bottom:12px;">
-      📍 Track My Order
+      Track My Order
     </button>
     <button class="new-order-btn btn" style="display:none;">
-      🍽️ Order More
+      Order More
     </button>
   </div>
 
   <!-- ─── Order Status Overlay ─────────────────────────────────────── -->
   <div class="customer-order-status" id="custOrderStatus">
-    <span class="status-icon" id="custStatusIcon">⏳</span>
+
     <h2 id="custStatusTitle">Order received!</h2>
     <div class="order-ref" id="custStatusRef">Table 01 · #0</div>
 
     <div class="status-timeline" id="custStatusTimeline"></div>
 
-    <button class="btn" id="custStatusNewOrder">🍽️ Order Again</button>
+    <button class="btn" id="custStatusNewOrder">Order Again</button>
   </div>
 
   <!-- ─── Toast Container ─────────────────────────────────────────── -->
@@ -168,7 +166,8 @@
   </script>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/socket-client.js"></script>
-  <script src="/js/customer.js"></script>
+  <script src="/app/js/socket-client.js"></script>
+  <script src="/app/js/customer.js"></script>
+  <script src="/app/js/license-client.js"></script>
 </body>
 </html>

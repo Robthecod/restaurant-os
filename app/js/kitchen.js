@@ -21,6 +21,18 @@
     statCooking: $('#statCooking'),
     kdsFilters: $('#kdsFilters'),
     toastContainer: $('#toastContainer'),
+    // 3-dot menu
+    kdsMenuBtn: $('#kdsMenuBtn'),
+    kdsDropdown: $('#kdsDropdown'),
+    kdsRequestIngredient: $('#kdsRequestIngredient'),
+    kdsRefreshOrders: $('#kdsRefreshOrders'),
+    // Ingredient modal
+    kdsIngredientModal: $('#kdsIngredientModal'),
+    kdsIngredientName: $('#kdsIngredientName'),
+    kdsIngredientQty: $('#kdsIngredientQty'),
+    kdsIngredientClose: $('#kdsIngredientClose'),
+    kdsIngredientCancel: $('#kdsIngredientCancel'),
+    kdsIngredientSubmit: $('#kdsIngredientSubmit'),
   };
 
   // ─── Init ────────────────────────────────────────────────────────────
@@ -141,7 +153,6 @@
     if (filtered.length === 0) {
       dom.kdsOrders.innerHTML = `
         <div class="kds-empty" id="kdsEmpty">
-          <div class="empty-icon">${state.filter === 'all' ? '🍽️' : '📭'}</div>
           <div class="empty-title">No ${state.filter === 'all' ? '' : state.filter} orders</div>
           <div class="empty-desc">${state.filter === 'all' ? 'Orders from waiters will appear here in real-time' : `No orders with status "${state.filter}"`}</div>
         </div>
@@ -188,10 +199,10 @@
   }
 
   function getUrgencyLabel(minutes) {
-    if (minutes >= 15) return '🔴 Urgent';
-    if (minutes >= 10) return '🟠 Overdue';
-    if (minutes >= 5) return '🟡 Pending';
-    return '⚪ New';
+    if (minutes >= 15) return 'Urgent';
+    if (minutes >= 10) return 'Overdue';
+    if (minutes >= 5) return 'Pending';
+    return 'New';
   }
 
   // ─── Render Single Order Card ────────────────────────────────────────
@@ -211,20 +222,19 @@
             <div class="order-item item-status-${itemStatus}" data-index="${idx}">
               <div class="order-item-main">
                 <div class="order-item-top">
-                  <span class="order-item-emoji">${getItemEmoji(item.name)}</span>
                   <span class="order-item-name">${item.name}</span>
-                  <span class="order-item-qty">×${item.quantity}</span>
+                  <span class="order-item-qty">x${item.quantity}</span>
                   <span class="item-status-dot status-${itemStatus}" title="${itemStatus}"></span>
                 </div>
-                ${item.modifiers ? `<span class="order-item-mod">📝 ${item.modifiers}</span>` : ''}
+                ${item.modifiers ? `<span class="order-item-mod">${item.modifiers}</span>` : ''}
                 <span class="item-status-label">${getStatusLabel(itemStatus)}</span>
               </div>
               <div class="order-item-actions">
                 ${itemStatus === 'pending'
-                  ? `<button class="btn btn-sm btn-success action-cook" data-index="${idx}">👨‍🍳 Cook</button>`
+                  ? `<button class="btn btn-sm btn-success action-cook" data-index="${idx}">Cook</button>`
                   : itemStatus === 'cooking'
-                    ? `<button class="btn btn-sm btn-primary action-ready" data-index="${idx}">✅ Ready</button>`
-                    : `<span class="item-done-badge">✅ Done</span>`
+                    ? `<button class="btn btn-sm btn-primary action-ready" data-index="${idx}">Ready</button>`
+                    : `<span class="item-done-badge">Done</span>`
                 }
               </div>
             </div>
@@ -262,9 +272,9 @@
 
   function getStatusLabel(status) {
     switch (status) {
-      case 'pending': return '⏳ Pending';
-      case 'cooking': return '👨‍🍳 Cooking';
-      case 'ready': return '✅ Ready';
+      case 'pending': return 'Pending';
+      case 'cooking': return 'Cooking';
+      case 'ready': return 'Ready';
       default: return status;
     }
   }
@@ -284,7 +294,7 @@
       // Update will come via socket
     } catch (err) {
       console.error('Update item status error:', err);
-      showToast(`<span class="toast-icon">❌</span> <span>${err.message}</span>`, 'error');
+      showToast(`${err.message}`, 'error');
     }
   }
 
@@ -294,10 +304,10 @@
     try {
       const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete order');
-      showToast(`<span class="toast-icon">🗑️</span> <span>Order #${orderId} cancelled</span>`, 'info');
+      showToast(`Order #${orderId} cancelled`, 'info');
     } catch (err) {
       console.error('Delete order error:', err);
-      showToast('<span class="toast-icon">❌</span> <span>Failed to cancel order</span>', 'error');
+      showToast('Failed to cancel order', 'error');
     }
   }
 
@@ -306,7 +316,7 @@
     document.querySelectorAll('.new-order-flash').forEach((el) => el.remove());
     const flash = document.createElement('div');
     flash.className = 'new-order-flash';
-    flash.textContent = `📥 New Order — Table ${order.tableNumber}`;
+    flash.textContent = `New Order — Table ${order.tableNumber}`;
     document.body.appendChild(flash);
     setTimeout(() => flash.remove(), 2000);
   }
@@ -351,88 +361,7 @@
 
   // ─── Emoji Map ───────────────────────────────────────────────────────
   function getItemEmoji(name) {
-    const lower = name.toLowerCase();
-    const specific = {
-      'paneer butter masala': '🍛',
-      'paneer tikka masala': '🍛',
-      'paneer tikka': '🧀',
-      'chilli paneer': '🧀',
-      'palak paneer': '🧀',
-      'shahi paneer': '🧀',
-      'dahi ke kabab': '🥙',
-      'hara bhara kabab': '🥙',
-      'veg seekh kabab': '🥙',
-      'masala spring rolls': '🥟',
-      'spinach & corn soup': '🍜',
-      'tomato basil soup': '🍜',
-      'cheese chilli toast': '🧀',
-      'crispy corn': '🌽',
-      'sweet potato fries': '🍟',
-      'garlic bread': '🍞',
-      'nachos': '🧀',
-      'kadai vegetable': '🍲',
-      'mix veg curry': '🍲',
-      'malai kofta': '🧆',
-      'gulab jamun': '🍡',
-      'gajar ka halwa': '🍮',
-      'brownie with ice cream': '🍫',
-      'mango mousse': '🍮',
-      'fresh fruit bowl': '🍎',
-      'ice cream': '🍦',
-      'sizzling brownie': '🍫',
-      'masala chai': '🫖',
-      'cold coffee': '☕',
-      'mango lassi': '🥭',
-      'fresh lime soda': '🍋',
-      'fruit smoothie': '🥤',
-      'coconut water': '🥥',
-      'soft drinks': '🥤',
-      'mint lemonade': '🍋',
-      'iced tea': '🧋',
-      'hot chocolate': '☕',
-      'fresh juice': '🧃',
-    };
-    for (const [key, emoji] of Object.entries(specific)) {
-      if (lower.includes(key)) return emoji;
-    }
-    const generic = {
-      'noodles': '🍜',
-      'pasta': '🍝',
-      'biryani': '🍚',
-      'pulao': '🍚',
-      'fried rice': '🍚',
-      'rice': '🍚',
-      'dal': '🥣',
-      'soup': '🍜',
-      'spring roll': '🥟',
-      'manchurian': '🥟',
-      'mushroom': '🍄',
-      'toast': '🍞',
-      'paratha': '🫓',
-      'naan': '🫓',
-      'thali': '🍱',
-      'sizzler': '🔥',
-      'kabab': '🥙',
-      'halwa': '🍮',
-      'brownie': '🍫',
-      'mousse': '🍮',
-      'tiramisu': '☕',
-      'rasmalai': '🥛',
-      'cheesecake': '🍰',
-      'kulfi': '🍦',
-      'phirni': '🍮',
-      'chai': '🫖',
-      'coffee': '☕',
-      'lassi': '🥤',
-      'buttermilk': '🥛',
-      'lemonade': '🍋',
-      'juice': '🧃',
-      'paneer': '🧀',
-    };
-    for (const [key, emoji] of Object.entries(generic)) {
-      if (lower.includes(key)) return emoji;
-    }
-    return '🍽️';
+    return '';
   }
 
   // ─── Toast ───────────────────────────────────────────────────────────
@@ -479,6 +408,112 @@
     });
   }
 
+  // ─── 3-Dot Menu ─────────────────────────────────────────────────────
+  function setupMenuListeners() {
+    // Toggle dropdown
+    dom.kdsMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = dom.kdsDropdown.style.display === 'block';
+      dom.kdsDropdown.style.display = isOpen ? 'none' : 'block';
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.kds-actions-menu')) {
+        dom.kdsDropdown.style.display = 'none';
+      }
+    });
+
+    // Refresh Orders
+    dom.kdsRefreshOrders.addEventListener('click', () => {
+      dom.kdsDropdown.style.display = 'none';
+      fetchOrders();
+      showToast('Orders refreshed', 'success');
+    });
+
+    // Report Missing Ingredient
+    dom.kdsRequestIngredient.addEventListener('click', () => {
+      dom.kdsDropdown.style.display = 'none';
+      dom.kdsIngredientName.value = '';
+      dom.kdsIngredientQty.value = '';
+      dom.kdsIngredientModal.classList.add('active');
+      setTimeout(() => dom.kdsIngredientName.focus(), 100);
+    });
+
+    // Close ingredient modal
+    function closeIngredientModal() {
+      dom.kdsIngredientModal.classList.remove('active');
+    }
+    dom.kdsIngredientClose.addEventListener('click', closeIngredientModal);
+    dom.kdsIngredientCancel.addEventListener('click', closeIngredientModal);
+    dom.kdsIngredientModal.addEventListener('click', (e) => {
+      if (e.target === dom.kdsIngredientModal) closeIngredientModal();
+    });
+
+    // Submit ingredient request — use multiple binding approaches for reliability
+    console.log('[DEBUG] Binding submitIngredientRequest listener');
+    if (dom.kdsIngredientSubmit) {
+      dom.kdsIngredientSubmit.addEventListener('click', submitIngredientRequest);
+      console.log('[DEBUG] Listener bound via addEventListener');
+    } else {
+      console.error('[DEBUG] kdsIngredientSubmit DOM ref is NULL!');
+    }
+
+    // Also bind via direct onclick as a fallback
+    if (dom.kdsIngredientSubmit) {
+      dom.kdsIngredientSubmit.onclick = function(e) {
+        console.log('[DEBUG] onclick fired');
+        submitIngredientRequest(e);
+      };
+    }
+
+    // Enter key in inputs
+    if (dom.kdsIngredientQty) {
+      dom.kdsIngredientQty.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submitIngredientRequest();
+      });
+    }
+  }
+
+  async function submitIngredientRequest() {
+    console.log('[DEBUG] submitIngredientRequest called');
+    const ingredient = dom.kdsIngredientName ? dom.kdsIngredientName.value.trim() : '';
+    const quantity = dom.kdsIngredientQty ? dom.kdsIngredientQty.value.trim() : '';
+    console.log('[DEBUG] ingredient:', ingredient, 'quantity:', quantity);
+
+    if (!ingredient || !quantity) {
+      showToast('Please fill in both fields', 'error');
+      return;
+    }
+
+    dom.kdsIngredientSubmit.disabled = true;
+    dom.kdsIngredientSubmit.textContent = '⏳ Sending...';
+
+    try {
+      const res = await fetch('/api/ingredient-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredient, quantity, requestedBy: 'Kitchen' }),
+      });
+
+      console.log('[DEBUG] fetch response status:', res.status);
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to submit request');
+      }
+
+      showToast(`✅ Requested ${ingredient} — ${quantity}`, 'success');
+      dom.kdsIngredientModal.classList.remove('active');
+    } catch (err) {
+      console.error('Ingredient request error:', err);
+      showToast(err.message, 'error');
+    } finally {
+      dom.kdsIngredientSubmit.disabled = false;
+      dom.kdsIngredientSubmit.textContent = 'Submit Request';
+    }
+  }
+
   // ─── Event Listeners ─────────────────────────────────────────────────
   function setupEventListeners() {
     dom.kdsFilters.addEventListener('click', (e) => {
@@ -489,6 +524,17 @@
         state.filter = btn.dataset.filter;
         renderOrders();
         updateStats();
+      }
+    });
+
+    setupMenuListeners();
+
+    // Close modals with Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (dom.kdsIngredientModal.classList.contains('active')) {
+          dom.kdsIngredientModal.classList.remove('active');
+        }
       }
     });
   }
