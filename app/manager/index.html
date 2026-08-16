@@ -225,9 +225,10 @@
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
       document.addEventListener('DOMContentLoaded', function() {
-        // Hover lift on menu preview panels and analytics cards
-        MotionEffects.tilt('.mgr-panel', { maxTilt: 2, perspective: 1200, scale: 1.002 });
-        MotionEffects.tilt('.analytics-card', { maxTilt: 3, perspective: 1000, scale: 1.005 });
+        // Subtle hover tilt on menu preview panels and analytics cards
+        // (deliberately toned down — near-flat tilt, no scale-up)
+        MotionEffects.tilt('.mgr-panel', { maxTilt: 1, perspective: 1600, scale: 1 });
+        MotionEffects.tilt('.analytics-card', { maxTilt: 1, perspective: 1600, scale: 1 });
 
         // Spring reveal on panels
         MotionEffects.scrollReveal('.mgr-panel, .analytics-card', { threshold: 0.1 });
