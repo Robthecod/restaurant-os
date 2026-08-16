@@ -106,6 +106,14 @@ Your own managed cloud deployment doesn't need a key — just leave `LICENSE_KEY
 
 > ⚠️ **Reality check:** this stops casual copying, but anyone running the full server on their own machine has the code and can defeat any client-side check. The real protections are the license (legal), your hosting, and the service agreement.
 
+## 📚 Guides & Docs
+
+All setup and reference documents live in the [`setup/`](setup/) folder:
+
+- [`setup/SETUP.md`](setup/SETUP.md) — client installation & licensing guide
+- [`setup/loyalty-guide.txt`](setup/loyalty-guide.txt) — loyalty system setup, math, APIs, WhatsApp
+- [`setup/CHAUKA_PRODUCT_CONCEPT.md`](setup/CHAUKA_PRODUCT_CONCEPT.md) — product concept
+
 ## 🏗️ Architecture
 
 ```
