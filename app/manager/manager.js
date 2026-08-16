@@ -7,6 +7,7 @@
     editingItem: null, // { category, item }
     socketConnected: false,
     openRequests: [], // open ingredient requests
+    openReports: [], // open help/complaint reports
   };
 
   // ─── DOM References ────────────────────────────────────────────────
@@ -60,6 +61,7 @@
     fetchMenu();
     fetchAnalytics();
     fetchOpenRequests();
+    fetchOpenReports();
     setupEventListeners();
   }
 
@@ -75,6 +77,7 @@
       dom.syncLabel.textContent = 'Connected';
       // Re-fetch open requests on reconnect to stay in sync
       fetchOpenRequests();
+      fetchOpenReports();
     });
 
     client.on('_disconnected', () => {
@@ -107,6 +110,24 @@
 
     client.on('ingredient_request_resolved', (request) => {
       state.openRequests = state.openRequests.filter((r) => r.id !== request.id);
+      updateBadge();
+      updateDropdown();
+    });
+
+    client.on('new_help_report', (report) => {
+      if (report.status === 'open') {
+        state.openReports.unshift(report);
+        updateBadge();
+        updateDropdown();
+        // Only show toast if dropdown is closed (to avoid spam when already viewing)
+        if (dom.notifDropdown.style.display === 'none') {
+          showToast(`🆘 ${report.title} (${report.requestedBy})`, 'info');
+        }
+      }
+    });
+
+    client.on('help_report_resolved', (report) => {
+      state.openReports = state.openReports.filter((r) => r.id !== report.id);
       updateBadge();
       updateDropdown();
     });
@@ -388,8 +409,20 @@
     }
   }
 
+  async function fetchOpenReports() {
+    try {
+      const res = await fetch('/api/help-reports');
+      if (res.ok) {
+        state.openReports = await res.json();
+        updateBadge();
+      }
+    } catch (err) {
+      console.error('Failed to fetch open help reports:', err);
+    }
+  }
+
   function updateBadge() {
-    const count = state.openRequests.length;
+    const count = state.openRequests.length + state.openReports.length;
     dom.notifBadge.textContent = count;
     dom.notifBadge.style.display = count > 0 ? 'flex' : 'none';
     dom.notifBell.classList.toggle('has-requests', count > 0);
@@ -397,15 +430,20 @@
 
   function updateDropdown() {
     const requests = state.openRequests;
+    const reports = state.openReports;
 
-    if (requests.length === 0) {
-      dom.notifDropdownBody.innerHTML = '<div class="notif-empty">No pending requests</div>';
+    if (requests.length === 0 && reports.length === 0) {
+      dom.notifDropdownBody.innerHTML = '<div class="notif-empty">No pending notifications</div>';
       return;
     }
 
-    dom.notifDropdownBody.innerHTML = requests
-      .map(
-        (r) => `
+    let html = '';
+
+    if (requests.length > 0) {
+      html += '<div class="notif-section-label">📦 Ingredient Requests</div>';
+      html += requests
+        .map(
+          (r) => `
         <div class="notif-item new">
           <div class="notif-item-icon">📦</div>
           <div class="notif-item-body">
@@ -417,18 +455,63 @@
           </div>
         </div>
       `
-      )
-      .join('');
+        )
+        .join('');
+    }
+
+    if (reports.length > 0) {
+      html += '<div class="notif-section-label">🆘 Help Reports</div>';
+      html += reports
+        .map(
+          (r) => `
+        <div class="notif-item new">
+          <div class="notif-item-icon">🆘</div>
+          <div class="notif-item-body">
+            <div class="notif-item-title">${escapeHtml(r.title)}</div>
+            <div class="notif-item-desc">${escapeHtml(r.description)}</div>
+            <div class="notif-item-meta">Reported by ${escapeHtml(r.requestedBy)}${r.tableNumber ? ' (Table ' + escapeHtml(r.tableNumber) + ')' : ''}</div>
+            <div class="notif-item-actions">
+              <button class="notif-resolve-btn" data-report-id="${r.id}">✓ Resolved</button>
+            </div>
+          </div>
+        </div>
+      `
+        )
+        .join('');
+    }
+
+    dom.notifDropdownBody.innerHTML = html;
 
     // Attach resolve handlers
     dom.notifDropdownBody.querySelectorAll('.notif-resolve-btn').forEach((btn) => {
       btn.addEventListener('click', async (e) => {
-        const id = parseInt(e.target.dataset.requestId);
-        e.target.disabled = true;
-        e.target.textContent = 'Resolving...';
-        await resolveRequest(id);
+        const el = e.target;
+        el.disabled = true;
+        el.textContent = 'Resolving...';
+        if (el.dataset.requestId) {
+          await resolveRequest(parseInt(el.dataset.requestId));
+        } else if (el.dataset.reportId) {
+          await resolveReport(parseInt(el.dataset.reportId));
+        }
       });
     });
+  }
+
+  async function resolveReport(id) {
+    try {
+      const res = await fetch(`/api/help-reports/${id}/resolve`, { method: 'PATCH' });
+      if (res.ok) {
+        state.openReports = state.openReports.filter((r) => r.id !== id);
+        updateBadge();
+        updateDropdown();
+        showToast('✅ Report marked as resolved', 'success');
+      } else {
+        showToast('Failed to resolve report', 'error');
+      }
+    } catch (err) {
+      console.error('Resolve report error:', err);
+      showToast('Failed to resolve report', 'error');
+    }
   }
 
   function escapeHtml(str) {

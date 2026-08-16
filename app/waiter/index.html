@@ -65,6 +65,10 @@
             <span style="font-size:1.1rem;">↩️</span>
             <span>Send Back Dish</span>
           </button>
+          <button class="waiter-dropdown-item" id="waiterHelpReport" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;color:var(--text-primary);font-size:0.88rem;font-weight:500;cursor:pointer;border-radius:6px;transition:background 0.12s;text-align:left;font-family:var(--font);">
+            <span style="font-size:1.1rem;">🆘</span>
+            <span>Help / Report an Issue</span>
+          </button>
           <div style="height:1px;background:var(--border-color);margin:4px 10px;"></div>
           <button class="waiter-dropdown-item" id="waiterRefreshOrders" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;color:var(--text-primary);font-size:0.88rem;font-weight:500;cursor:pointer;border-radius:6px;transition:background 0.12s;text-align:left;font-family:var(--font);">
             <span style="font-size:1.1rem;">🔄</span>
@@ -295,6 +299,30 @@
       <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;">
         <button class="btn btn-secondary" id="waiterSendBackCancel">Cancel</button>
         <button class="btn btn-primary" id="waiterSendBackSubmit">📋 Report Return</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Help / Complaint Modal ─── -->
+  <div class="modal-overlay" id="waiterHelpModal">
+    <div class="modal-content" style="max-width:440px;">
+      <div class="modal-header">
+        <h3>🆘 Help / Report an Issue</h3>
+        <button class="modal-close" id="waiterHelpClose" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text-muted);">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom:16px;">
+          <label style="display:block;font-size:0.82rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">Title</label>
+          <input type="text" id="waiterHelpTitle" placeholder="e.g., Printer not working at counter, Broken AC in section B..." style="width:100%;padding:12px 14px;border:1px solid var(--border-color);border-radius:8px;font-size:0.92rem;font-family:var(--font);outline:none;background:var(--bg-card);color:var(--text-primary);transition:border-color 0.15s;" />
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+          <label style="display:block;font-size:0.82rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">Description</label>
+          <textarea id="waiterHelpDesc" rows="3" placeholder="Describe the issue in detail so the manager can act on it..." style="width:100%;padding:12px 14px;border:1px solid var(--border-color);border-radius:8px;font-size:0.92rem;font-family:var(--font);outline:none;background:var(--bg-card);color:var(--text-primary);transition:border-color 0.15s;resize:vertical;"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn btn-secondary" id="waiterHelpCancel">Cancel</button>
+        <button class="btn btn-primary" id="waiterHelpSubmit">Submit Report</button>
       </div>
     </div>
   </div>

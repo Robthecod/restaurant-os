@@ -25,6 +25,7 @@
     kdsMenuBtn: $('#kdsMenuBtn'),
     kdsDropdown: $('#kdsDropdown'),
     kdsRequestIngredient: $('#kdsRequestIngredient'),
+    kdsHelpReport: $('#kdsHelpReport'),
     kdsRefreshOrders: $('#kdsRefreshOrders'),
     // Ingredient modal
     kdsIngredientModal: $('#kdsIngredientModal'),
@@ -33,6 +34,13 @@
     kdsIngredientClose: $('#kdsIngredientClose'),
     kdsIngredientCancel: $('#kdsIngredientCancel'),
     kdsIngredientSubmit: $('#kdsIngredientSubmit'),
+    // Help modal
+    kdsHelpModal: $('#kdsHelpModal'),
+    kdsHelpTitle: $('#kdsHelpTitle'),
+    kdsHelpDesc: $('#kdsHelpDesc'),
+    kdsHelpClose: $('#kdsHelpClose'),
+    kdsHelpCancel: $('#kdsHelpCancel'),
+    kdsHelpSubmit: $('#kdsHelpSubmit'),
   };
 
   // ─── Init ────────────────────────────────────────────────────────────
@@ -473,6 +481,62 @@
         if (e.key === 'Enter') submitIngredientRequest();
       });
     }
+
+    // Help / Report an Issue
+    dom.kdsHelpReport.addEventListener('click', () => {
+      dom.kdsDropdown.style.display = 'none';
+      dom.kdsHelpTitle.value = '';
+      dom.kdsHelpDesc.value = '';
+      dom.kdsHelpModal.classList.add('active');
+      setTimeout(() => dom.kdsHelpTitle.focus(), 100);
+    });
+
+    function closeHelpModal() {
+      dom.kdsHelpModal.classList.remove('active');
+    }
+    dom.kdsHelpClose.addEventListener('click', closeHelpModal);
+    dom.kdsHelpCancel.addEventListener('click', closeHelpModal);
+    dom.kdsHelpModal.addEventListener('click', (e) => {
+      if (e.target === dom.kdsHelpModal) closeHelpModal();
+    });
+
+    dom.kdsHelpSubmit.addEventListener('click', submitHelpReport);
+    dom.kdsHelpDesc.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) submitHelpReport();
+    });
+  }
+
+  // ─── Help / Complaint Report ─────────────────────────────────────────
+  async function submitHelpReport() {
+    const title = dom.kdsHelpTitle ? dom.kdsHelpTitle.value.trim() : '';
+    const description = dom.kdsHelpDesc ? dom.kdsHelpDesc.value.trim() : '';
+
+    if (!title || !description) {
+      showToast('Please fill in both title and description', 'error');
+      return;
+    }
+
+    dom.kdsHelpSubmit.disabled = true;
+    dom.kdsHelpSubmit.textContent = '⏳ Sending...';
+
+    try {
+      const res = await fetch('/api/help-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description, requestedBy: 'Kitchen' }),
+      });
+
+      if (!res.ok) throw new Error('Failed to submit report');
+
+      showToast(`🆘 Report sent: ${title}`, 'success');
+      dom.kdsHelpModal.classList.remove('active');
+    } catch (err) {
+      console.error('Help report error:', err);
+      showToast('Failed to submit report', 'error');
+    } finally {
+      dom.kdsHelpSubmit.disabled = false;
+      dom.kdsHelpSubmit.textContent = 'Submit Report';
+    }
   }
 
   async function submitIngredientRequest() {
@@ -532,7 +596,9 @@
     // Close modals with Escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (dom.kdsIngredientModal.classList.contains('active')) {
+        if (dom.kdsHelpModal.classList.contains('active')) {
+          dom.kdsHelpModal.classList.remove('active');
+        } else if (dom.kdsIngredientModal.classList.contains('active')) {
           dom.kdsIngredientModal.classList.remove('active');
         }
       }

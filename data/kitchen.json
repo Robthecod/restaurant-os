@@ -1,6 +1,7 @@
 {
   "nextIngredientId": 7,
   "nextReturnId": 1,
+  "nextHelpId": 1,
   "ingredientRequests": [
     {
       "id": 1,
@@ -63,5 +64,6 @@
       "resolvedAt": "2026-07-30T17:20:16.271Z"
     }
   ],
-  "returnedDishes": []
+  "returnedDishes": [],
+  "helpReports": []
 }

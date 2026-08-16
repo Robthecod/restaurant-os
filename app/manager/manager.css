@@ -859,6 +859,35 @@
   margin-top: 2px;
 }
 
+.notif-item-desc {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-top: 3px;
+  white-space: pre-line;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.notif-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  padding: 8px 12px 4px;
+  border-top: 1px solid var(--border-color);
+  margin-top: 4px;
+}
+
+.notif-section-label:first-child {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 4px;
+}
+
 .notif-item-actions {
   display: flex;
   gap: 4px;

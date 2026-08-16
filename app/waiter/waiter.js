@@ -94,6 +94,7 @@
     waiterDropdown: $('#waiterDropdown'),
     waiterRequestIngredient: $('#waiterRequestIngredient'),
     waiterSendBackDish: $('#waiterSendBackDish'),
+    waiterHelpReport: $('#waiterHelpReport'),
     waiterRefreshOrders: $('#waiterRefreshOrders'),
     // Ingredient modal
     waiterIngredientModal: $('#waiterIngredientModal'),
@@ -111,6 +112,13 @@
     waiterSendBackClose: $('#waiterSendBackClose'),
     waiterSendBackCancel: $('#waiterSendBackCancel'),
     waiterSendBackSubmit: $('#waiterSendBackSubmit'),
+    // Help modal
+    waiterHelpModal: $('#waiterHelpModal'),
+    waiterHelpTitle: $('#waiterHelpTitle'),
+    waiterHelpDesc: $('#waiterHelpDesc'),
+    waiterHelpClose: $('#waiterHelpClose'),
+    waiterHelpCancel: $('#waiterHelpCancel'),
+    waiterHelpSubmit: $('#waiterHelpSubmit'),
   };
 
   // ─── New DOM refs for sidebar ───
@@ -1171,10 +1179,35 @@
       if (e.key === 'Enter') submitReturnedDish();
     });
 
+    // Help / Report an Issue
+    dom.waiterHelpReport.addEventListener('click', () => {
+      dom.waiterDropdown.style.display = 'none';
+      dom.waiterHelpTitle.value = '';
+      dom.waiterHelpDesc.value = '';
+      dom.waiterHelpModal.classList.add('active');
+      setTimeout(() => dom.waiterHelpTitle.focus(), 100);
+    });
+
+    function closeHelpModal() {
+      dom.waiterHelpModal.classList.remove('active');
+    }
+    dom.waiterHelpClose.addEventListener('click', closeHelpModal);
+    dom.waiterHelpCancel.addEventListener('click', closeHelpModal);
+    dom.waiterHelpModal.addEventListener('click', (e) => {
+      if (e.target === dom.waiterHelpModal) closeHelpModal();
+    });
+
+    dom.waiterHelpSubmit.addEventListener('click', submitHelpReport);
+    dom.waiterHelpDesc.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) submitHelpReport();
+    });
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (dom.waiterSendBackModal.classList.contains('active')) {
+        if (dom.waiterHelpModal.classList.contains('active')) {
+          closeHelpModal();
+        } else if (dom.waiterSendBackModal.classList.contains('active')) {
           closeSendBackModal();
         } else if (dom.waiterIngredientModal.classList.contains('active')) {
           closeIngredientModal();
@@ -1225,6 +1258,44 @@
     } finally {
       dom.waiterIngredientSubmit.disabled = false;
       dom.waiterIngredientSubmit.textContent = 'Submit Request';
+    }
+  }
+
+  // ─── Help / Complaint Report ─────────────────────────────────────────
+  async function submitHelpReport() {
+    const title = dom.waiterHelpTitle.value.trim();
+    const description = dom.waiterHelpDesc.value.trim();
+
+    if (!title || !description) {
+      showToast('Please fill in both title and description', 'error');
+      return;
+    }
+
+    dom.waiterHelpSubmit.disabled = true;
+    dom.waiterHelpSubmit.textContent = '⏳ Sending...';
+
+    try {
+      const res = await fetch('/api/help-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          description,
+          requestedBy: `Waiter (Table ${state.tableNumber})`,
+          tableNumber: state.tableNumber,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to submit report');
+
+      showToast(`🆘 Report sent: ${title}`, 'success');
+      dom.waiterHelpModal.classList.remove('active');
+    } catch (err) {
+      console.error('Help report error:', err);
+      showToast('Failed to submit report', 'error');
+    } finally {
+      dom.waiterHelpSubmit.disabled = false;
+      dom.waiterHelpSubmit.textContent = 'Submit Report';
     }
   }
 

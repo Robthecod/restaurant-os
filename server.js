@@ -177,7 +177,7 @@ initDataFile(MENU_FILE, {
 
 initDataFile(ORDERS_FILE, { nextId: 1, orders: [] });
 initDataFile(LEADS_FILE, { nextDemoId: 1, nextSignupId: 1, demos: [], signups: [] });
-initDataFile(KITCHEN_FILE, { nextIngredientId: 1, nextReturnId: 1, ingredientRequests: [], returnedDishes: [] });
+initDataFile(KITCHEN_FILE, { nextIngredientId: 1, nextReturnId: 1, nextHelpId: 1, ingredientRequests: [], returnedDishes: [], helpReports: [] });
 initDataFile(LICENSE_FILE, { installId: null, lastVerifiedAt: null, lastCheckedAt: null, locked: false });
 
 // ─── LICENSE / ACTIVATION MANAGER ────────────────────────────────────────
@@ -674,6 +674,80 @@ app.post('/api/returned-dish', (req, res) => {
   } catch (err) {
     console.error('Returned dish error:', err);
     res.status(500).json({ error: 'Failed to report returned dish' });
+  }
+});
+
+// ─── HELP / COMPLAINT REPORT API ────────────────────────────────────────
+
+// POST /api/help-report — Staff records a complaint/note (title + description)
+app.post('/api/help-report', (req, res) => {
+  try {
+    const data = readJSON(KITCHEN_FILE);
+    const { title, description, requestedBy, tableNumber } = req.body;
+
+    if (!title || !description) {
+      return res.status(400).json({ error: 'title and description are required' });
+    }
+
+    const report = {
+      id: data.nextHelpId,
+      title: title.trim(),
+      description: description.trim(),
+      requestedBy: requestedBy || 'Staff',
+      tableNumber: tableNumber || '',
+      status: 'open',
+      createdAt: new Date().toISOString(),
+      resolvedAt: null,
+    };
+
+    data.nextHelpId++;
+    data.helpReports.push(report);
+    writeJSON(KITCHEN_FILE, data);
+
+    io.emit('new_help_report', report);
+    console.log(`  Help report #${report.id}: ${report.title} (by ${report.requestedBy})`);
+
+    res.status(201).json({ success: true, id: report.id });
+  } catch (err) {
+    console.error('Help report error:', err);
+    res.status(500).json({ error: 'Failed to submit help report' });
+  }
+});
+
+// GET /api/help-reports — Fetch all open help reports
+app.get('/api/help-reports', (req, res) => {
+  try {
+    const data = readJSON(KITCHEN_FILE);
+    const openReports = (data.helpReports || []).filter(r => r.status === 'open');
+    res.json(openReports);
+  } catch (err) {
+    console.error('Fetch help reports error:', err);
+    res.status(500).json({ error: 'Failed to fetch help reports' });
+  }
+});
+
+// PATCH /api/help-reports/:id/resolve — Mark a help report as resolved
+app.patch('/api/help-reports/:id/resolve', (req, res) => {
+  try {
+    const data = readJSON(KITCHEN_FILE);
+    const reportId = parseInt(req.params.id, 10);
+    const report = (data.helpReports || []).find(r => r.id === reportId);
+
+    if (!report) {
+      return res.status(404).json({ error: 'Help report not found' });
+    }
+
+    report.status = 'resolved';
+    report.resolvedAt = new Date().toISOString();
+    writeJSON(KITCHEN_FILE, data);
+
+    io.emit('help_report_resolved', report);
+    console.log(`  Help report #${reportId}: ${report.title} — RESOLVED`);
+
+    res.json({ success: true, id: report.id });
+  } catch (err) {
+    console.error('Resolve help report error:', err);
+    res.status(500).json({ error: 'Failed to resolve help report' });
   }
 });
 
