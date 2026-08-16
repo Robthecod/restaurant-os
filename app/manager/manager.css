@@ -539,6 +539,132 @@
   color: var(--text-muted);
 }
 
+/* Sales breakdown (yearly total + month/week/day chart) */
+.sales-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.sales-yearly-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.sales-yearly-value {
+  display: block;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--accent-gold);
+  margin-top: 2px;
+}
+
+.sales-yearly-sub {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.sales-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.sales-tab {
+  padding: 7px 16px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.15s;
+}
+
+.sales-tab:hover {
+  color: var(--text-primary);
+}
+
+.sales-tab.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.sales-chart {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  height: 170px;
+  padding-top: 8px;
+}
+
+.sales-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 0;
+}
+
+.sales-bar-track {
+  flex: 1;
+  width: 100%;
+  max-width: 46px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sales-bar {
+  width: 100%;
+  max-width: 36px;
+  min-height: 4px;
+  border-radius: 6px 6px 3px 3px;
+  background: linear-gradient(180deg, var(--accent-gold-light, #ffd200), var(--accent-gold, #f7971e));
+  transition: height 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.sales-bar-label {
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.sales-bar-value {
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sales-legend {
+  margin-top: 12px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
 /* Two-column grid */
 .analytics-grid {
   display: grid;

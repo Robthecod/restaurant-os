@@ -1221,6 +1221,15 @@ app.get('/api/analytics', (req, res) => {
     let ordersThisWeek = 0;
     let ordersThisMonth = 0;
 
+    // Sales breakdown buckets (local time): year / month / week (Sunday start) / day
+    const yearMap = {};  // 'YYYY' -> { revenue, orders }
+    const monthMap = {}; // 'YYYY-MM' -> { revenue, orders }
+    const weekMap = {};  // Sunday date 'YYYY-MM-DD' -> { revenue, orders }
+    const dayMap = {};   // 'YYYY-MM-DD' -> { revenue, orders }
+
+    const fmtLocalDate = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
     for (const order of completedOrders) {
       let orderItemCount = 0;
       let orderTotal = 0;
@@ -1270,6 +1279,24 @@ app.get('/api/analytics', (req, res) => {
         revenueThisMonth += orderTotal;
         ordersThisMonth++;
       }
+
+      // Bucket into year / month / week / day (local time)
+      const y = createdAt.getFullYear();
+      const monthKey = `${y}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
+      const dayKey = fmtLocalDate(createdAt);
+      const yearKey = String(y);
+
+      const weekStart = new Date(createdAt);
+      weekStart.setHours(0, 0, 0, 0);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekKey = fmtLocalDate(weekStart);
+
+      for (const map of [yearMap, monthMap, weekMap, dayMap]) {
+        const key = map === yearMap ? yearKey : map === monthMap ? monthKey : map === weekMap ? weekKey : dayKey;
+        if (!map[key]) map[key] = { revenue: 0, orders: 0 };
+        map[key].revenue += orderTotal;
+        map[key].orders++;
+      }
     }
 
     // Top 10 dishes by quantity sold (revenue computed in same pass above)
@@ -1282,6 +1309,67 @@ app.get('/api/analytics', (req, res) => {
         count,
         revenue: Math.round((itemRevenue[name] || 0) * 100) / 100,
       }));
+
+    // ─── Yearly / monthly / weekly / daily series (oldest → newest) ───
+    const monthShort = (d) => d.toLocaleString('en-US', { month: 'short' });
+
+    const byMonth = [];
+    {
+      const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+      for (let i = 0; i < 12; i++) {
+        const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const data = monthMap[key] || { revenue: 0, orders: 0 };
+        byMonth.push({
+          key,
+          label: monthShort(d),
+          fullLabel: d.toLocaleString('en-US', { month: 'short', year: 'numeric' }),
+          revenue: Math.round(data.revenue * 100) / 100,
+          orders: data.orders,
+        });
+      }
+    }
+
+    const byWeek = [];
+    {
+      const thisSunday = new Date(now);
+      thisSunday.setHours(0, 0, 0, 0);
+      thisSunday.setDate(thisSunday.getDate() - thisSunday.getDay());
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(thisSunday);
+        d.setDate(thisSunday.getDate() - i * 7);
+        const key = fmtLocalDate(d);
+        const data = weekMap[key] || { revenue: 0, orders: 0 };
+        byWeek.push({
+          key,
+          label: `${d.getDate()} ${monthShort(d)}`,
+          fullLabel: `Week of ${d.getDate()} ${monthShort(d)}`,
+          revenue: Math.round(data.revenue * 100) / 100,
+          orders: data.orders,
+        });
+      }
+    }
+
+    const byDay = [];
+    {
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(now);
+        d.setHours(0, 0, 0, 0);
+        d.setDate(now.getDate() - i);
+        const key = fmtLocalDate(d);
+        const data = dayMap[key] || { revenue: 0, orders: 0 };
+        byDay.push({
+          key,
+          label: `${d.getDate()} ${monthShort(d)}`,
+          fullLabel: d.toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+          revenue: Math.round(data.revenue * 100) / 100,
+          orders: data.orders,
+        });
+      }
+    }
+
+    const thisYearData = yearMap[String(now.getFullYear())] || { revenue: 0, orders: 0 };
+    const lastYearData = yearMap[String(now.getFullYear() - 1)] || { revenue: 0, orders: 0 };
 
     // ─── Wastage / Returns from sent-back dishes ───
     const kitchenData = readJSON(KITCHEN_FILE);
@@ -1310,6 +1398,13 @@ app.get('/api/analytics', (req, res) => {
         today: { orders: ordersToday, revenue: Math.round(revenueToday * 100) / 100 },
         thisWeek: { orders: ordersThisWeek, revenue: Math.round(revenueThisWeek * 100) / 100 },
         thisMonth: { orders: ordersThisMonth, revenue: Math.round(revenueThisMonth * 100) / 100 },
+      },
+      sales: {
+        thisYear: { revenue: Math.round(thisYearData.revenue * 100) / 100, orders: thisYearData.orders },
+        lastYear: { revenue: Math.round(lastYearData.revenue * 100) / 100, orders: lastYearData.orders },
+        byMonth,
+        byWeek,
+        byDay,
       },
       topDishes,
       timeSlots: Object.values(timeSlots).map((s) => ({

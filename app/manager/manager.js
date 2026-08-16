@@ -43,6 +43,7 @@
     analyticsContent: $('#analyticsContent'),
     analyticsSummary: $('#analyticsSummary'),
     analyticsPeriods: $('#analyticsPeriods'),
+    analyticsSales: $('#analyticsSales'),
     topDishesList: $('#topDishesList'),
     timeSlotsList: $('#timeSlotsList'),
     wastageTotal: $('#wastageTotal'),
@@ -574,6 +575,7 @@
   function renderAnalytics(data) {
     renderSummary(data.summary);
     renderPeriods(data.periods);
+    renderSales(data.sales);
     renderTopDishes(data.topDishes);
     renderTimeSlots(data.timeSlots);
     renderWastage(data.summary);
@@ -625,6 +627,68 @@
         <span class="period-orders">${periods.thisMonth.orders} order${periods.thisMonth.orders !== 1 ? 's' : ''}</span>
       </div>
     `;
+  }
+
+  // ─── Sales Breakdown (yearly total + month/week/day chart) ──────────
+  const fmtINR = (n) => '₹' + (n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+
+  function renderSales(sales) {
+    if (!dom.analyticsSales || !sales) return;
+
+    dom.analyticsSales.innerHTML = `
+      <h3 class="analytics-card-title">📈 Sales Breakdown</h3>
+      <div class="sales-header">
+        <div class="sales-yearly">
+          <span class="sales-yearly-label">Yearly Sales · ${new Date().getFullYear()}</span>
+          <span class="sales-yearly-value">${fmtINR(sales.thisYear.revenue)}</span>
+          <span class="sales-yearly-sub">${sales.thisYear.orders} orders${sales.lastYear.revenue ? ' · Last year ' + fmtINR(sales.lastYear.revenue) : ''}</span>
+        </div>
+        <div class="sales-tabs">
+          <button class="sales-tab active" data-range="month">Month</button>
+          <button class="sales-tab" data-range="week">Week</button>
+          <button class="sales-tab" data-range="day">Day</button>
+        </div>
+      </div>
+      <div class="sales-chart" id="salesChart"></div>
+      <div class="sales-legend" id="salesLegend"></div>
+    `;
+
+    renderSalesChart(sales, 'month');
+
+    dom.analyticsSales.querySelectorAll('.sales-tab').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        dom.analyticsSales.querySelectorAll('.sales-tab').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderSalesChart(sales, btn.dataset.range);
+      });
+    });
+  }
+
+  function renderSalesChart(sales, range) {
+    const chart = dom.analyticsSales.querySelector('#salesChart');
+    const legend = dom.analyticsSales.querySelector('#salesLegend');
+    if (!chart || !sales) return;
+
+    const series = sales['by' + range.charAt(0).toUpperCase() + range.slice(1)] || [];
+    const max = Math.max(...series.map((s) => s.revenue), 1);
+
+    chart.innerHTML = series
+      .map((s) => {
+        const h = Math.max(4, Math.round((s.revenue / max) * 100));
+        return `
+        <div class="sales-bar-col" title="${escapeHtml(s.fullLabel || s.label)}: ${fmtINR(s.revenue)} (${s.orders} orders)">
+          <div class="sales-bar-track">
+            <div class="sales-bar" style="height:${h}%"></div>
+          </div>
+          <span class="sales-bar-label">${escapeHtml(s.label)}</span>
+          <span class="sales-bar-value">${s.revenue > 0 ? fmtINR(s.revenue) : ''}</span>
+        </div>
+      `;
+      })
+      .join('');
+
+    const rangeLabel = range === 'month' ? 'Month' : range === 'week' ? 'Week' : 'Day';
+    legend.innerHTML = `<span>Highest ${rangeLabel.toLowerCase()}: <strong>${fmtINR(max)}</strong></span>`;
   }
 
   function renderTopDishes(dishes) {
