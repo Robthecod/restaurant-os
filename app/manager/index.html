@@ -45,6 +45,7 @@
   <div class="mgr-tabs">
     <button class="mgr-tab active" data-tab="menu">Menu</button>
     <button class="mgr-tab" data-tab="analytics">Analytics</button>
+    <button class="mgr-tab" data-tab="loyalty">Loyalty</button>
   </div>
 
   <!-- ─── Main Layout (Menu View) ─── -->
@@ -137,6 +138,60 @@
         <div class="preview-loading">Loading menu...</div>
       </div>
     </section>
+  </div>
+
+  <!-- ─── Loyalty View ─── -->
+  <div class="loyalty-view" id="loyaltyView" style="display:none;">
+    <div class="loyalty-admin-loading" id="loyaltyAdminLoading">
+      <div class="preview-loading">Loading loyalty...</div>
+    </div>
+    <div class="loyalty-admin-content" id="loyaltyAdminContent" style="display:none;">
+
+      <!-- Rules -->
+      <div class="analytics-card reveal-spring">
+        <h3 class="analytics-card-title">⚙️ Loyalty Rules</h3>
+        <div class="loyalty-rules-grid">
+          <label class="loyalty-rule-field">
+            <span>Points per ₹1 spent</span>
+            <input type="number" id="loyaltyRulePerRupee" min="0.1" step="0.1" />
+          </label>
+          <label class="loyalty-rule-field">
+            <span>Discount: spend pts = % of bill</span>
+            <input type="number" id="loyaltyRuleSpendPct" min="0" max="100" step="1" />
+          </label>
+          <label class="loyalty-rule-field">
+            <span>Discount: ₹ per 100 pts</span>
+            <input type="number" id="loyaltyRuleValuePct" min="0" max="100" step="1" />
+          </label>
+          <label class="loyalty-rule-field">
+            <span>🎂 Birthday bonus (pts)</span>
+            <input type="number" id="loyaltyRuleBirthday" min="0" step="10" />
+          </label>
+          <label class="loyalty-rule-field">
+            <span>🏅 Streak bonus every Nth visit</span>
+            <input type="number" id="loyaltyRuleStreakEvery" min="0" step="1" />
+          </label>
+          <label class="loyalty-rule-field">
+            <span>🏅 Streak bonus (pts)</span>
+            <input type="number" id="loyaltyRuleStreakBonus" min="0" step="10" />
+          </label>
+        </div>
+        <div class="loyalty-tiers" id="loyaltyTiers"></div>
+        <button class="btn btn-primary loyalty-save-btn" id="loyaltySaveRules">Save Rules</button>
+      </div>
+
+      <!-- Customers -->
+      <div class="analytics-card reveal-spring" style="margin-top:16px;">
+        <h3 class="analytics-card-title">👥 Customers</h3>
+        <div class="loyalty-customers" id="loyaltyCustomers"></div>
+      </div>
+
+      <!-- Ledger -->
+      <div class="analytics-card reveal-spring" style="margin-top:16px;">
+        <h3 class="analytics-card-title">📒 Points Ledger</h3>
+        <div class="loyalty-ledger" id="loyaltyLedger"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ─── Analytics View ─── -->

@@ -48,6 +48,20 @@
     timeSlotsList: $('#timeSlotsList'),
     wastageTotal: $('#wastageTotal'),
     wastageCount: $('#wastageCount'),
+    // Loyalty
+    loyaltyView: $('#loyaltyView'),
+    loyaltyAdminLoading: $('#loyaltyAdminLoading'),
+    loyaltyAdminContent: $('#loyaltyAdminContent'),
+    loyaltySaveRules: $('#loyaltySaveRules'),
+    loyaltyRulePerRupee: $('#loyaltyRulePerRupee'),
+    loyaltyRuleSpendPct: $('#loyaltyRuleSpendPct'),
+    loyaltyRuleValuePct: $('#loyaltyRuleValuePct'),
+    loyaltyRuleBirthday: $('#loyaltyRuleBirthday'),
+    loyaltyRuleStreakEvery: $('#loyaltyRuleStreakEvery'),
+    loyaltyRuleStreakBonus: $('#loyaltyRuleStreakBonus'),
+    loyaltyTiers: $('#loyaltyTiers'),
+    loyaltyCustomers: $('#loyaltyCustomers'),
+    loyaltyLedger: $('#loyaltyLedger'),
     notifBell: $('#notifBell'),
     notifBadge: $('#notifBadge'),
     notifContainer: $('#notifContainer'),
@@ -387,14 +401,172 @@
     if (tab === 'menu') {
       dom.menuView.style.display = '';
       dom.analyticsView.style.display = 'none';
+      dom.loyaltyView.style.display = 'none';
       dom.mgrSubtitle.textContent = 'Menu Administration';
+    } else if (tab === 'loyalty') {
+      dom.menuView.style.display = 'none';
+      dom.analyticsView.style.display = 'none';
+      dom.loyaltyView.style.display = '';
+      dom.mgrSubtitle.textContent = 'Loyalty & Rewards';
+      loadLoyalty();
     } else {
       dom.menuView.style.display = 'none';
       dom.analyticsView.style.display = '';
+      dom.loyaltyView.style.display = 'none';
       dom.mgrSubtitle.textContent = 'Sales Analytics';
       // Refresh analytics
       fetchAnalytics();
     }
+  }
+
+  // ─── Loyalty Admin ───────────────────────────────────────────────────
+  async function loadLoyalty() {
+    dom.loyaltyAdminLoading.style.display = '';
+    dom.loyaltyAdminContent.style.display = 'none';
+    try {
+      const [settingsRes, customersRes, ledgerRes] = await Promise.all([
+        fetch('/api/loyalty/settings'),
+        fetch('/api/loyalty/customers'),
+        fetch('/api/loyalty/ledger?limit=60'),
+      ]);
+      const settings = await settingsRes.json();
+      const customers = await customersRes.json();
+      const ledger = await ledgerRes.json();
+      fillLoyaltyRules(settings);
+      renderLoyaltyTiers(settings);
+      renderLoyaltyCustomers(customers);
+      renderLoyaltyLedger(ledger);
+      dom.loyaltyAdminLoading.style.display = 'none';
+      dom.loyaltyAdminContent.style.display = '';
+    } catch (err) {
+      console.error('Load loyalty error:', err);
+      dom.loyaltyAdminLoading.innerHTML =
+        '<div class="preview-loading">Could not load loyalty data.</div>';
+    }
+  }
+
+  function fillLoyaltyRules(s) {
+    dom.loyaltyRulePerRupee.value = s.pointsPerRupee;
+    dom.loyaltyRuleSpendPct.value = Math.round((s.discountSpendPct || 0) * 100);
+    dom.loyaltyRuleValuePct.value = Math.round((s.discountValuePct || 0) * 100);
+    dom.loyaltyRuleBirthday.value = s.birthdayBonus;
+    dom.loyaltyRuleStreakEvery.value = s.streakEvery;
+    dom.loyaltyRuleStreakBonus.value = s.streakBonus;
+  }
+
+  function renderLoyaltyTiers(s) {
+    dom.loyaltyTiers.innerHTML = `
+      <div class="loyalty-tiers-title">Tiers (min lifetime spend → points multiplier)</div>
+      ${s.tiers
+        .map(
+          (t) => `
+        <div class="loyalty-tier-row">
+          <span class="loyalty-tier-name">${escapeHtml(t.name)}</span>
+          <label>Min ₹ <input type="number" data-tier-key="${t.key}" data-tier-field="minSpent" value="${t.minSpent}" min="0" step="500" /></label>
+          <label>× <input type="number" data-tier-key="${t.key}" data-tier-field="multiplier" value="${t.multiplier}" min="0.1" step="0.1" /></label>
+        </div>`
+        )
+        .join('')}
+    `;
+  }
+
+  function renderLoyaltyCustomers(customers) {
+    if (!customers.length) {
+      dom.loyaltyCustomers.innerHTML =
+        '<div class="loyalty-empty">No customers yet — guests start earning as soon as they enter a phone number.</div>';
+      return;
+    }
+    const rows = customers
+      .slice()
+      .sort((a, b) => b.points - a.points)
+      .map(
+        (c) => `
+        <div class="loyalty-customer-row">
+          <div class="loyalty-customer-id">
+            <span class="loyalty-customer-name">${escapeHtml(c.name || 'Guest')}</span>
+            <span class="loyalty-customer-phone">+91 ${c.phone}</span>
+          </div>
+          <span class="loyalty-customer-tier tier-${c.tier}">${medalFor(c.tier)} ${escapeHtml(c.tier)}</span>
+          <span class="loyalty-customer-pts"><b>${c.points}</b> pts</span>
+          <span class="loyalty-customer-spent">₹${c.totalSpent.toLocaleString('en-IN')}</span>
+          <span class="loyalty-customer-visits">${c.visits} visit${c.visits !== 1 ? 's' : ''}</span>
+        </div>`
+      )
+      .join('');
+    dom.loyaltyCustomers.innerHTML = `
+      <div class="loyalty-customer-head">
+        <span>Customer</span><span>Tier</span><span>Points</span><span>Spent</span><span>Visits</span>
+      </div>
+      ${rows}
+    `;
+  }
+
+  function renderLoyaltyLedger(ledger) {
+    if (!ledger.length) {
+      dom.loyaltyLedger.innerHTML = '<div class="loyalty-empty">No activity yet.</div>';
+      return;
+    }
+    dom.loyaltyLedger.innerHTML = ledger
+      .map((e) => {
+        const sign = e.points > 0 ? '+' : '';
+        const icon = e.type === 'earn' ? '✨' : e.type === 'birthday' ? '🎂' : e.type === 'streak' ? '🏅' : e.type === 'redeem_item' ? '🎁' : '💳';
+        const when = new Date(e.createdAt).toLocaleString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        return `
+        <div class="loyalty-ledger-row ${e.points > 0 ? 'earn' : 'spend'}">
+          <span class="loyalty-ledger-icon">${icon}</span>
+          <span class="loyalty-ledger-desc">${escapeHtml(e.description || e.type)}</span>
+          <span class="loyalty-ledger-pts">${sign}${e.points}</span>
+          <span class="loyalty-ledger-when">${when}</span>
+        </div>`;
+      })
+      .join('');
+  }
+
+  async function saveLoyaltyRules() {
+    const tiers = Array.from(dom.loyaltyTiers.querySelectorAll('.loyalty-tier-row')).map((row) => ({
+      key: row.querySelector('[data-tier-field="minSpent"]').dataset.tierKey,
+      name: row.querySelector('.loyalty-tier-name').textContent.trim(),
+      minSpent: parseFloat(row.querySelector('[data-tier-field="minSpent"]').value) || 0,
+      multiplier: parseFloat(row.querySelector('[data-tier-field="multiplier"]').value) || 1,
+    }));
+
+    const body = {
+      pointsPerRupee: parseFloat(dom.loyaltyRulePerRupee.value) || 1,
+      discountSpendPct: (parseFloat(dom.loyaltyRuleSpendPct.value) || 0) / 100,
+      discountValuePct: (parseFloat(dom.loyaltyRuleValuePct.value) || 0) / 100,
+      birthdayBonus: parseInt(dom.loyaltyRuleBirthday.value, 10) || 0,
+      streakEvery: parseInt(dom.loyaltyRuleStreakEvery.value, 10) || 0,
+      streakBonus: parseInt(dom.loyaltyRuleStreakBonus.value, 10) || 0,
+      tiers,
+    };
+
+    try {
+      const res = await fetch('/api/loyalty/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      showToast('Loyalty rules saved ✅', 'success');
+    } catch (err) {
+      console.error('Save loyalty rules error:', err);
+      showToast('Could not save rules', 'error');
+    }
+  }
+
+  function medalFor(tier) {
+    return tier === 'gold' ? '🥇' : tier === 'platinum' ? '💎' : '🥈';
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (ch) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])
+    );
   }
 
   // ─── Notification Functions ───────────────────────────────────────────
@@ -751,6 +923,9 @@
     document.querySelectorAll('.mgr-tab').forEach((tab) => {
       tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
+
+    // Loyalty: save rules
+    dom.loyaltySaveRules.addEventListener('click', saveLoyaltyRules);
 
     // Add category
     dom.addCategoryBtn.addEventListener('click', addCategory);

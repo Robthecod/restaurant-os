@@ -16,6 +16,8 @@
     editingItems: [],      // mutable items array during edit
     socketConnected: false,
     sending: false,          // guard against duplicate order submissions
+    loyaltyPhone: '',        // customer phone for loyalty (optional)
+    loyaltyCustomer: null,   // looked-up customer profile
   };
 
   // ─── DOM References ────────────────────────────────────────────────
@@ -61,6 +63,9 @@
     basketModalTotal: $('#basketModalTotal'),
     basketClose: $('#basketClose'),
     basketSend: $('#basketSend'),
+    basketPhone: $('#basketPhone'),
+    basketPhoneLookup: $('#basketPhoneLookup'),
+    basketLoyaltyStatus: $('#basketLoyaltyStatus'),
 
     // Orders Panel
     ordersModal: $('#ordersModal'),
@@ -367,6 +372,36 @@
     dom.basketCount.classList.add('basket-bounce');
   }
 
+  // ─── Loyalty Lookup ────────────────────────────────────────────────
+  async function lookupLoyalty() {
+    const phone = dom.basketPhone.value.trim();
+    if (!phone) {
+      state.loyaltyPhone = '';
+      state.loyaltyCustomer = null;
+      dom.basketLoyaltyStatus.textContent = '';
+      return;
+    }
+    try {
+      const res = await fetch(`/api/loyalty/status?phone=${encodeURIComponent(phone)}`);
+      const data = await res.json();
+      if (data.exists) {
+        state.loyaltyPhone = data.customer.phone;
+        state.loyaltyCustomer = data.customer;
+        const medal = data.customer.tier === 'gold' ? '🥇' : data.customer.tier === 'platinum' ? '💎' : '🥈';
+        dom.basketLoyaltyStatus.textContent = `${medal} ${data.customer.name || data.customer.phone} · ${data.customer.points} pts`;
+        dom.basketLoyaltyStatus.className = 'loyalty-row-status found';
+      } else {
+        state.loyaltyPhone = phone;
+        state.loyaltyCustomer = null;
+        dom.basketLoyaltyStatus.textContent = 'New customer — profile will be created';
+        dom.basketLoyaltyStatus.className = 'loyalty-row-status';
+      }
+    } catch (_) {
+      dom.basketLoyaltyStatus.textContent = 'Could not look up';
+      dom.basketLoyaltyStatus.className = 'loyalty-row-status';
+    }
+  }
+
   // ─── Send Order ──────────────────────────────────────────────────────
   async function sendOrder() {
     if (state.basket.length === 0 || state.sending) return;
@@ -382,15 +417,18 @@
     dom.basketSend.textContent = '⏳ Sending...';
 
     try {
+      const body = {
+        tableNumber: state.tableNumber,
+        waiterId: state.waiterId,
+        waiterName: state.waiterName,
+        items,
+      };
+      if (state.loyaltyPhone) body.customerPhone = state.loyaltyPhone;
+
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tableNumber: state.tableNumber,
-          waiterId: state.waiterId,
-          waiterName: state.waiterName,
-          items,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) throw new Error('Failed to send order');
@@ -398,6 +436,10 @@
       const order = await res.json();
       showToast(`Order #${order.id} sent to kitchen!`, 'success');
       state.basket = [];
+      state.loyaltyPhone = '';
+      state.loyaltyCustomer = null;
+      dom.basketPhone.value = '';
+      dom.basketLoyaltyStatus.textContent = '';
       updateBasketUI();
       dom.basketModal.classList.remove('active');
       // Refresh orders to include the new one
@@ -1040,6 +1082,12 @@
       dom.basketModal.classList.remove('active');
     });
     dom.basketSend.addEventListener('click', sendOrder);
+
+    // Basket: loyalty lookup
+    dom.basketPhoneLookup.addEventListener('click', lookupLoyalty);
+    dom.basketPhone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') lookupLoyalty();
+    });
     dom.basketModal.addEventListener('click', (e) => {
       if (e.target === dom.basketModal) dom.basketModal.classList.remove('active');
     });

@@ -1488,3 +1488,62 @@
   .menu-item:hover .item-emoji { transform: none; }
   .connection-dot.connected { animation: none; }
 }
+
+/* ─── Loyalty row (basket modal) ───────────────────────────────── */
+.loyalty-row {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed #fde68a;
+}
+.loyalty-row-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.loyalty-row-input {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.loyalty-row-input input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  outline: none;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.loyalty-row-input input:focus {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 0 3px rgba(247, 151, 30, 0.15);
+}
+.loyalty-lookup-btn {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ffd200, #f7971e);
+  color: #fff;
+  font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.loyalty-lookup-btn:active { transform: scale(0.96); }
+.loyalty-row-status {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  min-height: 16px;
+}
+.loyalty-row-status.found {
+  color: var(--accent-gold);
+  font-weight: 600;
+}

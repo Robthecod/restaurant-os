@@ -1,0 +1,34 @@
+{
+  "nextCustomerId": 2,
+  "nextLedgerId": 2,
+  "settings": {
+    "pointsPerRupee": 1,
+    "discountSpendPct": 0.1,
+    "discountValuePct": 0.5,
+    "birthdayBonus": 200,
+    "streakEvery": 5,
+    "streakBonus": 50,
+    "tiers": [
+      {
+        "key": "silver",
+        "name": "Silver",
+        "minSpent": 0,
+        "multiplier": 1
+      },
+      {
+        "key": "gold",
+        "name": "Gold",
+        "minSpent": 5000,
+        "multiplier": 1.5
+      },
+      {
+        "key": "platinum",
+        "name": "Platinum",
+        "minSpent": 15000,
+        "multiplier": 2
+      }
+    ]
+  },
+  "customers": [],
+  "ledger": []
+}

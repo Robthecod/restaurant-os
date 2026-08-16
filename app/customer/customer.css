@@ -1073,3 +1073,242 @@ body.customer-page {
   .skeleton-card .skeleton-circle,
   .skeleton-card .skeleton-line { animation: none; background: #f5f5f4; }
 }
+
+/* ─── Loyalty Banner ───────────────────────────────────────────── */
+.customer-loyalty {
+  padding: 2px 18px 0;
+  margin: 0 auto 4px;
+  max-width: 480px;
+}
+.loyalty-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--c-card);
+  border: 1px solid var(--c-border);
+  border-radius: 100px;
+  padding: 6px 6px 6px 16px;
+  box-shadow: var(--c-shadow);
+}
+.loyalty-input-row input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--c-font);
+  font-size: 0.9rem;
+  color: var(--c-text);
+}
+.loyalty-btn {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 100px;
+  background: linear-gradient(135deg, var(--c-primary-light), var(--c-primary));
+  color: #fff;
+  font-family: var(--c-font);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: var(--c-transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.loyalty-btn:active { transform: scale(0.96); }
+
+.loyalty-register {
+  margin-top: 10px;
+  background: var(--c-card);
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--c-shadow);
+}
+.loyalty-register-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+.loyalty-register input {
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-radius-sm);
+  padding: 12px 14px;
+  font-family: var(--c-font);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.loyalty-register input:focus {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px var(--c-primary-glow);
+}
+
+.loyalty-status { margin-top: 10px; }
+.loyalty-banner {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-radius);
+  padding: 14px 16px;
+  box-shadow: var(--c-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  animation: menuItemIn 350ms var(--c-bounce) backwards;
+}
+.loyalty-banner.gold { background: linear-gradient(135deg, #fffbeb, #fde68a); }
+.loyalty-banner.platinum { background: linear-gradient(135deg, #f5f3ff, #e9d5ff); }
+.loyalty-banner-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.loyalty-greeting {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--c-text);
+}
+.loyalty-tier {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--c-primary-dark);
+  background: rgba(255, 255, 255, 0.6);
+  padding: 4px 10px;
+  border-radius: 100px;
+  text-transform: capitalize;
+}
+.loyalty-points {
+  font-size: 0.95rem;
+  color: var(--c-text-secondary);
+}
+.loyalty-points b { font-size: 1.15rem; color: var(--c-primary); }
+.loyalty-value { font-size: 0.78rem; color: var(--c-primary-dark); }
+
+/* ─── Redeem Button (cart bar) ────────────────────────────────── */
+.customer-redeem-btn {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--c-border);
+  background: var(--c-card);
+  font-size: 1.2rem;
+  cursor: pointer;
+  box-shadow: var(--c-shadow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--c-transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.customer-redeem-btn:active { transform: scale(0.92); }
+
+.customer-cart-discount {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--c-accent-green);
+}
+
+/* ─── Redeem Modal ────────────────────────────────────────────── */
+.redeem-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 40vh;
+  overflow-y: auto;
+  margin-bottom: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+.redeem-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--c-radius-sm);
+  background: #fff;
+  cursor: pointer;
+  transition: var(--c-transition);
+  -webkit-tap-highlight-color: transparent;
+}
+.redeem-item:active { transform: scale(0.98); }
+.redeem-item.added { border-color: var(--c-accent-green); background: #f0fdf4; }
+.redeem-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.redeem-item-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--c-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.redeem-item-cost {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-primary);
+}
+.redeem-item-action {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--c-primary);
+  border: 1px solid var(--c-primary-light);
+  border-radius: 100px;
+  padding: 6px 14px;
+}
+.redeem-item.added .redeem-item-action {
+  color: var(--c-accent-green);
+  border-color: var(--c-accent-green);
+}
+.redeem-empty {
+  text-align: center;
+  color: var(--c-text-muted);
+  font-size: 0.85rem;
+  padding: 20px 0;
+}
+
+.redeem-discount-row { margin: 4px 0 6px; }
+.redeem-discount-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--c-text);
+  cursor: pointer;
+  background: #fffbeb;
+  border: 1px dashed var(--c-primary-light);
+  border-radius: var(--c-radius-sm);
+  padding: 12px 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+.redeem-discount-toggle input {
+  accent-color: var(--c-primary);
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.redeem-hint {
+  font-size: 0.72rem;
+  color: var(--c-text-muted);
+  margin-top: 6px;
+}
+
+.loyalty-earned {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: var(--c-accent-green);
+  font-weight: 700;
+  font-size: 0.9rem;
+  border-radius: var(--c-radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}

@@ -10,6 +10,12 @@
     selectedItem: null,
     currentOrder: null, // the last placed order, for tracking
     socketConnected: false,
+    // Loyalty
+    loyalty: null,         // public customer object, or null while not linked
+    loyaltyPhone: '',      // normalized phone of the active guest
+    loyaltySettings: null, // earning/redemption rules from the server
+    redeemCart: [],        // [{ name, points }] free items being redeemed
+    useDiscount: false,    // bill-discount toggle
   };
 
   // ─── DOM References ────────────────────────────────────────────────
@@ -63,6 +69,26 @@
 
     // Toast
     toastContainer: $('#custToastContainer'),
+
+    // Loyalty
+    loyaltyPhone: $('#loyaltyPhone'),
+    loyaltyCheck: $('#loyaltyCheck'),
+    loyaltyRegister: $('#loyaltyRegister'),
+    loyaltyName: $('#loyaltyName'),
+    loyaltyBirthday: $('#loyaltyBirthday'),
+    loyaltyRegisterBtn: $('#loyaltyRegisterBtn'),
+    loyaltyStatus: $('#loyaltyStatus'),
+    redeemBtn: $('#custRedeemBtn'),
+    redeemModal: $('#custRedeemModal'),
+    redeemBalance: $('#redeemBalance'),
+    redeemItems: $('#redeemItems'),
+    redeemDiscountRow: $('#redeemDiscountRow'),
+    redeemUseDiscount: $('#redeemUseDiscount'),
+    redeemDiscountSpend: $('#redeemDiscountSpend'),
+    redeemDiscountAmount: $('#redeemDiscountAmount'),
+    redeemClose: $('#redeemClose'),
+    cartDiscount: $('#custCartDiscount'),
+    loyaltyEarned: $('#custLoyaltyEarned'),
   };
 
   // ─── Init ────────────────────────────────────────────────────────────
@@ -81,6 +107,9 @@
 
     // Setup event listeners
     setupEventListeners();
+
+    // Loyalty: load rules + restore the guest's account
+    initLoyalty();
   }
 
   // ─── Socket ──────────────────────────────────────────────────────────
@@ -120,6 +149,18 @@
       if (state.currentOrder && data.id === state.currentOrder.id) {
         state.currentOrder = data;
         updateStatusTimeline(data);
+      }
+    });
+
+    // Loyalty balance changed (e.g. points awarded on delivery)
+    client.on('loyalty_updated', (customer) => {
+      if (customer && customer.phone === state.loyaltyPhone) {
+        const prev = state.loyalty ? state.loyalty.points : 0;
+        state.loyalty = customer;
+        renderLoyaltyBanner();
+        if (prev > 0 && customer.points > prev) {
+          showToast(`🎉 +${customer.points - prev} pts earned! New balance: ${customer.points}`, 'success');
+        }
       }
     });
   }
@@ -217,18 +258,202 @@
     updateCartUI();
   }
 
+  function cartTotal() {
+    return state.cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
+  }
+
   function updateCartUI() {
     const count = state.cart.reduce((sum, c) => sum + c.quantity, 0);
-    const total = state.cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
+    const total = cartTotal();
 
     dom.cartCount.textContent = `${count} item${count !== 1 ? 's' : ''}`;
     dom.cartTotal.textContent = `₹${total.toFixed(2)}`;
     dom.placeOrder.disabled = count === 0;
 
+    // Loyalty: show redeemed items + discount on the cart bar
+    const lines = [];
+    if (state.redeemCart.length) {
+      lines.push(`🎁 ${state.redeemCart.map((r) => r.name).join(', ')}`);
+    }
+    if (state.useDiscount) {
+      const spend = discountSpendFor(total);
+      const amount = Math.floor(spend * (state.loyaltySettings?.discountValuePct || 0.5));
+      if (spend > 0) lines.push(`−₹${amount} off (${spend} pts)`);
+    }
+    if (lines.length) {
+      dom.cartDiscount.textContent = lines.join(' · ');
+      dom.cartDiscount.style.display = 'block';
+    } else {
+      dom.cartDiscount.style.display = 'none';
+    }
+
     // Bounce animation on count change
     dom.cartCount.classList.remove('cart-bounce');
     void dom.cartCount.offsetWidth; // force reflow
     dom.cartCount.classList.add('cart-bounce');
+  }
+
+  // ─── Loyalty ────────────────────────────────────────────────────────
+  async function initLoyalty() {
+    try {
+      const res = await fetch('/api/loyalty/settings');
+      state.loyaltySettings = await res.json();
+    } catch (_) {
+      state.loyaltySettings = null;
+    }
+
+    const saved = localStorage.getItem('chauka_loyalty_phone');
+    if (saved) {
+      dom.loyaltyPhone.value = saved;
+      await checkLoyalty(saved);
+    }
+  }
+
+  async function checkLoyalty(phone) {
+    try {
+      const res = await fetch(`/api/loyalty/status?phone=${encodeURIComponent(phone)}`);
+      const data = await res.json();
+      if (data.exists) {
+        state.loyalty = data.customer;
+        state.loyaltyPhone = data.customer.phone;
+        localStorage.setItem('chauka_loyalty_phone', data.customer.phone);
+        dom.loyaltyInputRow.style.display = 'none';
+        dom.loyaltyRegister.style.display = 'none';
+        renderLoyaltyBanner();
+        showToast('Welcome back — points loaded! 🎉', 'success');
+      } else {
+        state.loyaltyPhone = phone;
+        dom.loyaltyInputRow.style.display = 'none';
+        dom.loyaltyRegister.style.display = 'block';
+        dom.loyaltyStatus.style.display = 'none';
+        dom.redeemBtn.style.display = 'none';
+      }
+    } catch (_) {
+      showToast('Could not check loyalty. Try again!', 'error');
+    }
+  }
+
+  async function registerLoyalty() {
+    const name = dom.loyaltyName.value.trim();
+    const birthday = dom.loyaltyBirthday.value;
+    try {
+      const res = await fetch('/api/loyalty/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: state.loyaltyPhone, name, birthday }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not register');
+      state.loyalty = data;
+      localStorage.setItem('chauka_loyalty_phone', data.phone);
+      dom.loyaltyRegister.style.display = 'none';
+      renderLoyaltyBanner();
+      showToast('You\'re all set — start earning points! ✨', 'success');
+    } catch (err) {
+      showToast(err.message || 'Could not register', 'error');
+    }
+  }
+
+  function renderLoyaltyBanner() {
+    if (!state.loyalty) return;
+    const c = state.loyalty;
+    const value = Math.floor(c.points * (state.loyaltySettings?.discountValuePct || 0.5));
+    const medal = c.tier === 'gold' ? '🥇' : c.tier === 'platinum' ? '💎' : '🥈';
+    dom.loyaltyStatus.innerHTML = `
+      <div class="loyalty-banner ${c.tier}">
+        <div class="loyalty-banner-top">
+          <span class="loyalty-greeting">Hi ${escapeHtml(c.name || 'guest')} 👋</span>
+          <span class="loyalty-tier">${medal} ${escapeHtml(c.tier)}</span>
+        </div>
+        <div class="loyalty-points"><b>${c.points}</b> pts <span class="loyalty-value">≈ ₹${value} off</span></div>
+      </div>`;
+    dom.loyaltyStatus.style.display = 'block';
+    dom.redeemBtn.style.display = 'inline-flex';
+    dom.redeemBalance.textContent = `${c.points} pts`;
+  }
+
+  // Points needed for the bill discount at the current cart total
+  function discountSpendFor(total) {
+    const s = state.loyaltySettings;
+    const balance = state.loyalty ? state.loyalty.points : 0;
+    if (!s || balance <= 0 || total <= 0) return 0;
+    return Math.min(balance, Math.floor(total * s.discountSpendPct));
+  }
+
+  // Rough estimate of what this order will earn (tier multiplier applied)
+  function estimateEarn(total) {
+    const s = state.loyaltySettings;
+    if (!s || !total) return 0;
+    let pts = Math.floor(total / s.pointsPerRupee);
+    const tier =
+      (s.tiers || []).find((t) => t.key === (state.loyalty && state.loyalty.tier)) || (s.tiers || [])[0];
+    return Math.floor(pts * (tier ? tier.multiplier : 1));
+  }
+
+  function openRedeemModal() {
+    if (!state.loyalty) return;
+    const balance = state.loyalty.points;
+    dom.redeemBalance.textContent = `${balance} pts`;
+
+    // Free items: anything whose face price fits the balance
+    const items = [];
+    if (state.menu) {
+      for (const cat of Object.keys(state.menu.categories)) {
+        for (const item of state.menu.categories[cat]) {
+          if (item.available !== false && Math.ceil(item.price) <= balance) {
+            items.push({ name: item.name, price: item.price });
+          }
+        }
+      }
+    }
+    dom.redeemItems.innerHTML = items.length
+      ? items
+          .map((it) => {
+            const added = state.redeemCart.some((r) => r.name === it.name);
+            return `
+            <div class="redeem-item ${added ? 'added' : ''}" data-name="${escapeHtml(it.name)}" data-points="${Math.ceil(it.price)}">
+              <div class="redeem-item-info">
+                <span class="redeem-item-name">${escapeHtml(it.name)}</span>
+                <span class="redeem-item-cost">${Math.ceil(it.price)} pts</span>
+              </div>
+              <span class="redeem-item-action">${added ? '✓ Added' : 'Redeem'}</span>
+            </div>`;
+          })
+          .join('')
+      : '<div class="redeem-empty">Not enough points for a free item yet — keep ordering! 💪</div>';
+
+    // Bill discount row
+    const spend = discountSpendFor(cartTotal());
+    const amount = Math.floor(spend * (state.loyaltySettings?.discountValuePct || 0.5));
+    if (spend > 0) {
+      dom.redeemDiscountSpend.textContent = spend;
+      dom.redeemDiscountAmount.textContent = amount;
+      dom.redeemDiscountRow.style.display = 'block';
+    } else {
+      dom.redeemDiscountRow.style.display = 'none';
+      dom.redeemUseDiscount.checked = false;
+      state.useDiscount = false;
+    }
+
+    dom.redeemModal.classList.add('active');
+  }
+
+  function closeRedeemModal() {
+    dom.redeemModal.classList.remove('active');
+  }
+
+  function toggleRedeemItem(name, points) {
+    const idx = state.redeemCart.findIndex((r) => r.name === name);
+    if (idx >= 0) state.redeemCart.splice(idx, 1);
+    else state.redeemCart.push({ name, points });
+    updateCartUI();
+    openRedeemModal(); // re-render the list with the new state
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (ch) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])
+    );
   }
 
   // ─── Place Order ────────────────────────────────────────────────────
@@ -245,16 +470,28 @@
     dom.placeOrder.textContent = 'Sending...';
 
     try {
+      const body = {
+        tableNumber: state.tableNumber,
+        items,
+      };
+      if (state.loyaltyPhone) body.customerPhone = state.loyaltyPhone;
+      if (state.redeemCart.length) body.redeemItems = state.redeemCart;
+      if (state.useDiscount) body.useDiscount = true;
+
       const res = await fetch('/api/orders/customer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tableNumber: state.tableNumber,
-          items,
-        }),
+        body: JSON.stringify(body),
       });
 
-      if (!res.ok) throw new Error('Failed to place order');
+      if (!res.ok) {
+        let msg = 'Failed to place order';
+        try {
+          const e = await res.json();
+          if (e.error) msg = e.error;
+        } catch (_) {}
+        throw new Error(msg);
+      }
 
       const order = await res.json();
       state.currentOrder = order;
@@ -265,9 +502,24 @@
       dom.customerHeader.style.display = 'none';
       dom.confirmation.style.display = 'block';
 
-      // Clear cart
+      // Clear cart + this order's redemptions (the account stays linked)
       state.cart = [];
+      state.redeemCart = [];
+      state.useDiscount = false;
+      dom.cartDiscount.style.display = 'none';
       updateCartUI();
+
+      if (order.loyaltyCustomer) {
+        state.loyalty = order.loyaltyCustomer;
+        renderLoyaltyBanner();
+      }
+      if (state.loyaltyPhone) {
+        const est = estimateEarn(order.grossTotal || 0);
+        if (est > 0) {
+          dom.loyaltyEarned.textContent = `✨ You'll earn ~${est} pts when your order is delivered`;
+          dom.loyaltyEarned.style.display = 'block';
+        }
+      }
 
       showToast(`Order #${order.id} placed! The kitchen has it.`, 'success');
 
@@ -277,7 +529,7 @@
       }, 3000);
     } catch (err) {
       console.error('Place order error:', err);
-      showToast('Could not place order. Try again!', 'error');
+      showToast(err.message || 'Could not place order. Try again!', 'error');
     } finally {
       dom.placeOrder.disabled = false;
       dom.placeOrder.textContent = 'Place Order';
@@ -476,6 +728,33 @@
     // Place order
     dom.placeOrder.addEventListener('click', placeOrder);
 
+    // Loyalty: check phone / register
+    dom.loyaltyCheck.addEventListener('click', () => {
+      const phone = dom.loyaltyPhone.value.trim();
+      if (phone.length < 7) return showToast('Enter a valid phone number', 'error');
+      checkLoyalty(phone);
+    });
+    dom.loyaltyPhone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') dom.loyaltyCheck.click();
+    });
+    dom.loyaltyRegisterBtn.addEventListener('click', registerLoyalty);
+
+    // Loyalty: redeem modal
+    dom.redeemBtn.addEventListener('click', openRedeemModal);
+    dom.redeemClose.addEventListener('click', closeRedeemModal);
+    dom.redeemModal.addEventListener('click', (e) => {
+      if (e.target === dom.redeemModal) closeRedeemModal();
+    });
+    dom.redeemItems.addEventListener('click', (e) => {
+      const el = e.target.closest('.redeem-item');
+      if (!el) return;
+      toggleRedeemItem(el.dataset.name, parseInt(el.dataset.points, 10) || 0);
+    });
+    dom.redeemUseDiscount.addEventListener('change', () => {
+      state.useDiscount = dom.redeemUseDiscount.checked;
+      updateCartUI();
+    });
+
     // Confirmation: Track order
     dom.confirmation.addEventListener('click', (e) => {
       const trackBtn = e.target.closest('.track-btn');
@@ -491,10 +770,11 @@
     // Order status: New order
     dom.statusNewOrder.addEventListener('click', resetToMenu);
 
-    // Keyboard: Escape closes modal
+    // Keyboard: Escape closes modals
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         closeItemModal();
+        closeRedeemModal();
       }
     });
   }

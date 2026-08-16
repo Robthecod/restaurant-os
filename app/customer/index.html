@@ -35,6 +35,21 @@
        <br>we'll take care of the rest.</p>
   </div>
 
+  <!-- ─── Loyalty ─────────────────────────────────────────────────── -->
+  <div class="customer-loyalty" id="custLoyalty">
+    <div class="loyalty-input-row" id="loyaltyInputRow">
+      <input type="tel" id="loyaltyPhone" placeholder="Enter phone to earn points" maxlength="10" inputmode="numeric" autocomplete="tel" />
+      <button class="loyalty-btn" id="loyaltyCheck">Go</button>
+    </div>
+    <div class="loyalty-register" id="loyaltyRegister" style="display:none;">
+      <div class="loyalty-register-title">New here? Set up loyalty ✨</div>
+      <input type="text" id="loyaltyName" placeholder="Your name (optional)" />
+      <input type="date" id="loyaltyBirthday" />
+      <button class="loyalty-btn" id="loyaltyRegisterBtn">Save &amp; start earning</button>
+    </div>
+    <div class="loyalty-status" id="loyaltyStatus" style="display:none;"></div>
+  </div>
+
   <!-- ─── Category Tabs ───────────────────────────────────────────── -->
   <div class="customer-categories" id="custCategories"></div>
 
@@ -53,7 +68,9 @@
       <span class="customer-cart-label">Your Order</span>
       <span class="customer-cart-count" id="custCartCount">0 items</span>
       <span class="customer-cart-total" id="custCartTotal">₹0.00</span>
+      <span class="customer-cart-discount" id="custCartDiscount" style="display:none;"></span>
     </div>
+    <button class="customer-redeem-btn" id="custRedeemBtn" style="display:none;" title="Redeem points">🎁</button>
     <button class="customer-cart-place-order" id="custPlaceOrder" disabled>
       Place Order
     </button>
@@ -96,10 +113,37 @@
     </div>
   </div>
 
+  <!-- ─── Redeem Points Modal ─────────────────────────────────────── -->
+  <div class="customer-modal-overlay" id="custRedeemModal">
+    <div class="customer-modal">
+      <div class="customer-modal-handle"></div>
+      <div class="customer-modal-header">
+        <div class="customer-modal-header-text">
+          <h3>🎁 Redeem Points</h3>
+          <div class="price" id="redeemBalance">0 pts</div>
+        </div>
+      </div>
+      <div class="customer-modal-body">
+        <div class="redeem-items" id="redeemItems"></div>
+        <div class="redeem-discount-row" id="redeemDiscountRow" style="display:none;">
+          <label class="redeem-discount-toggle">
+            <input type="checkbox" id="redeemUseDiscount" />
+            <span>Use <b id="redeemDiscountSpend">0</b> pts for <b>₹<span id="redeemDiscountAmount">0</span></b> off this bill</span>
+          </label>
+          <div class="redeem-hint">Free items are the better deal — a discount costs 2× the points.</div>
+        </div>
+      </div>
+      <div class="customer-modal-footer">
+        <button class="btn-secondary" id="redeemClose">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ─── Confirmation Screen ─────────────────────────────────────── -->
   <div class="customer-confirmation" id="custConfirmation" style="display:none;">
     <h2>Order Placed!</h2>
     <div class="order-num" id="custConfirmOrderNum">#0</div>
+    <div class="loyalty-earned" id="custLoyaltyEarned" style="display:none;"></div>
     <p>
       Your order is on its way to the kitchen.<br>
       Sit back, relax, and we'll bring it to you!

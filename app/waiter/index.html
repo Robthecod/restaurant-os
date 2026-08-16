@@ -160,6 +160,14 @@
       </div>
       <div class="modal-body">
         <div id="basketItems"></div>
+        <div class="loyalty-row">
+          <div class="loyalty-row-label">✨ Loyalty</div>
+          <div class="loyalty-row-input">
+            <input type="tel" id="basketPhone" placeholder="Customer phone (optional)" maxlength="10" inputmode="numeric" autocomplete="tel" />
+            <button class="loyalty-lookup-btn" id="basketPhoneLookup" type="button">Look up</button>
+          </div>
+          <div class="loyalty-row-status" id="basketLoyaltyStatus"></div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="basketClose">Continue Ordering</button>

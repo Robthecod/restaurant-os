@@ -41,6 +41,7 @@ const MENU_FILE = path.join(DATA_DIR, 'menu.json');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 const KITCHEN_FILE = path.join(DATA_DIR, 'kitchen.json');
 const LICENSE_FILE = path.join(DATA_DIR, 'license.json');
+const LOYALTY_FILE = path.join(DATA_DIR, 'customers.json');
 
 // Shared static assets for the app screens (style.css, motion.js, manifest,
 // sw.js, icons) — served at root. The restaurant screens live in /app/.
@@ -174,6 +175,283 @@ initDataFile(MENU_FILE, {
 initDataFile(ORDERS_FILE, { nextId: 1, orders: [] });
 initDataFile(KITCHEN_FILE, { nextIngredientId: 1, nextReturnId: 1, nextHelpId: 1, ingredientRequests: [], returnedDishes: [], helpReports: [] });
 initDataFile(LICENSE_FILE, { installId: null, lastVerifiedAt: null, lastCheckedAt: null, locked: false });
+
+// ─── LOYALTY / CUSTOMER REWARDS ─────────────────────────────────────────
+// Phone-based loyalty: guests earn points on delivered orders, can redeem
+// for free items (face value in points) or a deliberately weaker bill
+// discount (spend 10% of the bill in points for 5% off) so item
+// redemptions are the attractive path.
+
+const LOYALTY_DEFAULTS = {
+  pointsPerRupee: 1,     // 1 point per ₹1 spent (before tier multiplier)
+  discountSpendPct: 0.1, // points required for a discount = 10% of the bill
+  discountValuePct: 0.5, // each point spent = ₹0.50 off (10% of bill → 5% off)
+  birthdayBonus: 200,
+  streakEvery: 5,        // bonus every Nth completed visit
+  streakBonus: 50,
+  tiers: [
+    { key: 'silver', name: 'Silver', minSpent: 0, multiplier: 1 },
+    { key: 'gold', name: 'Gold', minSpent: 5000, multiplier: 1.5 },
+    { key: 'platinum', name: 'Platinum', minSpent: 15000, multiplier: 2 },
+  ],
+};
+
+initDataFile(LOYALTY_FILE, {
+  nextCustomerId: 1,
+  nextLedgerId: 1,
+  settings: JSON.parse(JSON.stringify(LOYALTY_DEFAULTS)),
+  customers: [],
+  ledger: [],
+});
+
+function readLoyalty() {
+  return readJSON(LOYALTY_FILE);
+}
+
+function writeLoyalty(data) {
+  writeJSON(LOYALTY_FILE, data);
+}
+
+function normalizePhone(phone) {
+  return String(phone || '').replace(/[^\d]/g, '').replace(/^0+/, '').slice(-10);
+}
+
+function findCustomer(data, phone) {
+  return data.customers.find((c) => c.phone === normalizePhone(phone));
+}
+
+function computeTier(settings, totalSpent) {
+  let tier = settings.tiers[0];
+  for (const t of settings.tiers) {
+    if (totalSpent >= t.minSpent) tier = t;
+  }
+  return tier;
+}
+
+function addLedger(data, entry) {
+  entry.id = data.nextLedgerId++;
+  data.ledger.push(entry);
+  if (data.ledger.length > 500) data.ledger = data.ledger.slice(-500);
+}
+
+function loyaltyCustomerPublic(c) {
+  return {
+    id: c.id,
+    phone: c.phone,
+    name: c.name || '',
+    tier: c.tier,
+    points: c.points,
+    totalSpent: c.totalSpent,
+    visits: c.visits,
+    birthdaySet: !!c.birthday,
+  };
+}
+
+// Order total from menu prices (redeemed items are free, so they don't count)
+function orderTotalFromMenu(order, menu) {
+  const priceMap = {};
+  for (const cat of Object.keys(menu.categories)) {
+    for (const item of menu.categories[cat]) priceMap[item.name.toLowerCase()] = item.price;
+  }
+  let total = 0;
+  for (const item of order.items || []) {
+    if (item.redeemed) continue;
+    total += (priceMap[item.name.toLowerCase()] || item.price || 0) * (item.quantity || 1);
+  }
+  return total;
+}
+
+// Award points when an order is delivered. Called from every delivery path;
+// guarded by order.loyaltyAwarded so points are only ever given once.
+function awardLoyaltyForOrder(order) {
+  try {
+    if (order.status !== 'delivered' || !order.customerPhone) return;
+    if (order.loyaltyAwarded) return;
+
+    const loyalty = readLoyalty();
+    const settings = loyalty.settings;
+    const phone = normalizePhone(order.customerPhone);
+    if (!phone) return;
+
+    let customer = findCustomer(loyalty, phone);
+    if (!customer) {
+      customer = {
+        id: loyalty.nextCustomerId++,
+        phone,
+        name: '',
+        birthday: '',
+        points: 0,
+        totalSpent: 0,
+        visits: 0,
+        tier: 'silver',
+        pointsEarned: 0,
+        pointsRedeemed: 0,
+        createdAt: new Date().toISOString(),
+        lastVisitAt: null,
+      };
+      loyalty.customers.push(customer);
+    }
+
+    const menu = readJSON(MENU_FILE);
+    const total = orderTotalFromMenu(order, menu);
+
+    customer.visits++;
+    customer.totalSpent += total;
+    customer.lastVisitAt = new Date().toISOString();
+    customer.tier = computeTier(settings, customer.totalSpent).key;
+
+    let earned = Math.floor(total / settings.pointsPerRupee);
+    const tier = settings.tiers.find((t) => t.key === customer.tier) || settings.tiers[0];
+    earned = Math.floor(earned * (tier.multiplier || 1));
+
+    let bonusEarned = 0;
+    if (earned > 0) {
+      customer.points += earned;
+      customer.pointsEarned += earned;
+      addLedger(loyalty, {
+        customerId: customer.id,
+        phone,
+        type: 'earn',
+        points: earned,
+        orderId: order.id,
+        description: `Earned on order #${order.id} (₹${Math.round(total)})`,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    // 🎂 Birthday bonus
+    const now = new Date();
+    const mmdd = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (customer.birthday && customer.birthday === mmdd && settings.birthdayBonus > 0) {
+      customer.points += settings.birthdayBonus;
+      customer.pointsEarned += settings.birthdayBonus;
+      bonusEarned += settings.birthdayBonus;
+      addLedger(loyalty, {
+        customerId: customer.id,
+        phone,
+        type: 'birthday',
+        points: settings.birthdayBonus,
+        orderId: order.id,
+        description: '🎂 Birthday bonus',
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    // 🏅 Visit streak bonus
+    if (settings.streakEvery > 0 && customer.visits % settings.streakEvery === 0 && settings.streakBonus > 0) {
+      customer.points += settings.streakBonus;
+      customer.pointsEarned += settings.streakBonus;
+      bonusEarned += settings.streakBonus;
+      addLedger(loyalty, {
+        customerId: customer.id,
+        phone,
+        type: 'streak',
+        points: settings.streakBonus,
+        orderId: order.id,
+        description: `🏅 ${customer.visits}th visit bonus`,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    order.loyaltyAwarded = true;
+    order.loyaltyEarned = earned + bonusEarned;
+
+    writeLoyalty(loyalty);
+    io.emit('loyalty_updated', loyaltyCustomerPublic(customer));
+    console.log(`  Loyalty: +${order.loyaltyEarned} pts for ${phone} (order #${order.id})`);
+  } catch (err) {
+    console.error('Loyalty award error:', err);
+  }
+}
+
+// Attach a phone number + process point redemptions at order placement.
+// Returns { customer } on success, { error } on failure, or null when no phone.
+function applyLoyaltyRedemption(data, order, body) {
+  const phone = normalizePhone(body.customerPhone);
+  if (!phone) return null;
+
+  const loyalty = readLoyalty();
+  const settings = loyalty.settings;
+  let customer = findCustomer(loyalty, phone);
+  if (!customer) {
+    customer = {
+      id: loyalty.nextCustomerId++,
+      phone,
+      name: (body.customerName || '').trim(),
+      birthday: (body.customerBirthday || '').trim(),
+      points: 0,
+      totalSpent: 0,
+      visits: 0,
+      tier: 'silver',
+      pointsEarned: 0,
+      pointsRedeemed: 0,
+      createdAt: new Date().toISOString(),
+      lastVisitAt: null,
+    };
+    loyalty.customers.push(customer);
+  }
+
+  order.customerPhone = phone;
+
+  // 1) Free item redemptions (face value in points)
+  const redeemItems = Array.isArray(body.redeemItems) ? body.redeemItems : [];
+  for (const ri of redeemItems) {
+    const points = parseInt(ri.points, 10) || 0;
+    if (points <= 0) continue;
+    if (customer.points < points) return { error: 'Not enough points for ' + ri.name };
+    customer.points -= points;
+    customer.pointsRedeemed += points;
+    addLedger(loyalty, {
+      customerId: customer.id,
+      phone,
+      type: 'redeem_item',
+      points: -points,
+      orderId: order.id,
+      item: ri.name,
+      description: `Redeemed ${ri.name} for ${points} pts`,
+      createdAt: new Date().toISOString(),
+    });
+    order.items.push({
+      name: ri.name,
+      quantity: 1,
+      modifiers: '🎁 Rewarded with points',
+      status: 'pending',
+      price: 0,
+      redeemed: true,
+      pointsCost: points,
+    });
+  }
+
+  // 2) Bill discount: spend 10% of the bill in points → 5% off (by design,
+  //    weaker value than free-item redemptions, so items are the draw)
+  if (body.useDiscount && customer.points > 0) {
+    const menu = readJSON(MENU_FILE);
+    const total = orderTotalFromMenu(order, menu);
+    const maxSpend = Math.floor(total * settings.discountSpendPct);
+    const points = Math.min(customer.points, maxSpend);
+    if (points > 0) {
+      const discount = Math.floor(points * settings.discountValuePct);
+      customer.points -= points;
+      customer.pointsRedeemed += points;
+      addLedger(loyalty, {
+        customerId: customer.id,
+        phone,
+        type: 'redeem_discount',
+        points: -points,
+        orderId: order.id,
+        discount,
+        description: `Bill discount ₹${discount} for ${points} pts`,
+        createdAt: new Date().toISOString(),
+      });
+      order.discount = discount;
+      order.discountPoints = points;
+    }
+  }
+
+  writeLoyalty(loyalty);
+  io.emit('loyalty_updated', loyaltyCustomerPublic(customer));
+  return { customer: loyaltyCustomerPublic(customer) };
+}
 
 // ─── LICENSE / ACTIVATION MANAGER ────────────────────────────────────────
 // Self-hosted installs "phone home" to a licensing server. When the license
@@ -374,6 +652,101 @@ function scheduleNextCheck() {
 // ─── Middleware ──────────────────────────────────────────────────────────
 
 app.use(express.json());
+// ─── LOYALTY API ─────────────────────────────────────────────────────────
+
+// GET /api/loyalty/settings — public earning/redemption rules
+app.get('/api/loyalty/settings', (req, res) => {
+  res.json(readLoyalty().settings);
+});
+
+// POST /api/loyalty/register — create or update a customer profile
+app.post('/api/loyalty/register', (req, res) => {
+  try {
+    const loyalty = readLoyalty();
+    const phone = normalizePhone(req.body.phone);
+    if (!phone) return res.status(400).json({ error: 'A valid phone number is required' });
+
+    let customer = findCustomer(loyalty, phone);
+    if (!customer) {
+      customer = {
+        id: loyalty.nextCustomerId++,
+        phone,
+        name: (req.body.name || '').trim(),
+        birthday: (req.body.birthday || '').trim(),
+        points: 0,
+        totalSpent: 0,
+        visits: 0,
+        tier: 'silver',
+        pointsEarned: 0,
+        pointsRedeemed: 0,
+        createdAt: new Date().toISOString(),
+        lastVisitAt: null,
+      };
+      loyalty.customers.push(customer);
+    } else {
+      if (req.body.name) customer.name = String(req.body.name).trim();
+      if (req.body.birthday) customer.birthday = String(req.body.birthday).trim();
+    }
+
+    writeLoyalty(loyalty);
+    res.status(201).json(loyaltyCustomerPublic(customer));
+  } catch (err) {
+    console.error('Loyalty register error:', err);
+    res.status(500).json({ error: 'Failed to register customer' });
+  }
+});
+
+// GET /api/loyalty/status?phone= — balance check for the customer screen
+app.get('/api/loyalty/status', (req, res) => {
+  const phone = normalizePhone(req.query.phone || '');
+  if (!phone) return res.status(400).json({ error: 'phone is required' });
+  const loyalty = readLoyalty();
+  const customer = findCustomer(loyalty, phone);
+  if (!customer) return res.json({ exists: false, phone });
+  res.json({ exists: true, customer: loyaltyCustomerPublic(customer) });
+});
+
+// GET /api/loyalty/customers — manager directory
+app.get('/api/loyalty/customers', (req, res) => {
+  const loyalty = readLoyalty();
+  res.json(loyalty.customers.map((c) => loyaltyCustomerPublic(c)));
+});
+
+// GET /api/loyalty/ledger?limit=50 — manager activity feed
+app.get('/api/loyalty/ledger', (req, res) => {
+  const limit = Math.min(200, parseInt(req.query.limit, 10) || 50);
+  const loyalty = readLoyalty();
+  res.json(loyalty.ledger.slice(-limit).reverse());
+});
+
+// POST /api/loyalty/settings — manager updates rules
+app.post('/api/loyalty/settings', (req, res) => {
+  try {
+    const loyalty = readLoyalty();
+    const s = loyalty.settings;
+    if (req.body.pointsPerRupee != null) s.pointsPerRupee = Math.max(1, parseFloat(req.body.pointsPerRupee) || 1);
+    if (req.body.discountSpendPct != null) s.discountSpendPct = Math.min(1, Math.max(0, parseFloat(req.body.discountSpendPct) || 0));
+    if (req.body.discountValuePct != null) s.discountValuePct = Math.min(1, Math.max(0, parseFloat(req.body.discountValuePct) || 0));
+    if (req.body.birthdayBonus != null) s.birthdayBonus = Math.max(0, parseInt(req.body.birthdayBonus, 10) || 0);
+    if (req.body.streakEvery != null) s.streakEvery = Math.max(0, parseInt(req.body.streakEvery, 10) || 0);
+    if (req.body.streakBonus != null) s.streakBonus = Math.max(0, parseInt(req.body.streakBonus, 10) || 0);
+    if (Array.isArray(req.body.tiers) && req.body.tiers.length >= 2) {
+      s.tiers = req.body.tiers.map((t) => ({
+        key: String(t.key || 'tier'),
+        name: String(t.name || t.key || 'Tier'),
+        minSpent: Math.max(0, parseFloat(t.minSpent) || 0),
+        multiplier: Math.max(0.1, parseFloat(t.multiplier) || 1),
+      }));
+    }
+    writeLoyalty(loyalty);
+    io.emit('loyalty_settings_updated', s);
+    res.json(s);
+  } catch (err) {
+    console.error('Loyalty settings error:', err);
+    res.status(500).json({ error: 'Failed to update loyalty settings' });
+  }
+});
+
 
 // CORS for cross-origin requests from tablets
 app.use((req, res, next) => {
@@ -833,6 +1206,17 @@ app.post('/api/orders/customer', (req, res) => {
       updatedAt: new Date().toISOString(),
     };
 
+    // Loyalty: attach phone + process point redemptions (free items / discount)
+    const loyaltyResult = applyLoyaltyRedemption(data, order, req.body);
+    if (loyaltyResult && loyaltyResult.error) {
+      return res.status(400).json({ error: loyaltyResult.error });
+    }
+
+    const menu = readJSON(MENU_FILE);
+    const grossTotal = orderTotalFromMenu(order, menu);
+    order.grossTotal = grossTotal;
+    order.paidTotal = Math.max(0, grossTotal - (order.discount || 0));
+
     data.nextId++;
     data.orders.push(order);
     writeJSON(ORDERS_FILE, data);
@@ -841,8 +1225,12 @@ app.post('/api/orders/customer', (req, res) => {
     io.emit('kitchen_new_order', order);
     console.log('  Customer Order #' + order.id + ' placed for Table ' + order.tableNumber);
 
-    res.status(201).json(order);
+    res.status(201).json({
+      ...order,
+      loyaltyCustomer: loyaltyResult ? loyaltyResult.customer : null,
+    });
   } catch (err) {
+    console.error('Customer order error:', err);
     res.status(500).json({ error: 'Failed to place customer order' });
   }
 });
@@ -871,6 +1259,17 @@ app.post('/api/orders', (req, res) => {
       updatedAt: new Date().toISOString(),
     };
 
+    // Loyalty: attach phone + process point redemptions (free items / discount)
+    const loyaltyResult = applyLoyaltyRedemption(data, order, req.body);
+    if (loyaltyResult && loyaltyResult.error) {
+      return res.status(400).json({ error: loyaltyResult.error });
+    }
+
+    const menu = readJSON(MENU_FILE);
+    const grossTotal = orderTotalFromMenu(order, menu);
+    order.grossTotal = grossTotal;
+    order.paidTotal = Math.max(0, grossTotal - (order.discount || 0));
+
     data.nextId++;
     data.orders.push(order);
     writeJSON(ORDERS_FILE, data);
@@ -879,8 +1278,12 @@ app.post('/api/orders', (req, res) => {
     io.emit('kitchen_new_order', order);
     console.log('  Order #' + order.id + ' placed for Table ' + order.tableNumber);
 
-    res.status(201).json(order);
+    res.status(201).json({
+      ...order,
+      loyaltyCustomer: loyaltyResult ? loyaltyResult.customer : null,
+    });
   } catch (err) {
+    console.error('Place order error:', err);
     res.status(500).json({ error: 'Failed to place order' });
   }
 });
@@ -915,6 +1318,7 @@ app.put('/api/orders/:id', (req, res) => {
       order.status = deriveOrderStatus(order.items);
     }
 
+    awardLoyaltyForOrder(order); // award points when delivered
     writeJSON(ORDERS_FILE, data);
     io.emit('order_updated', order);
 
@@ -941,6 +1345,7 @@ app.put('/api/orders/:id/status', (req, res) => {
 
     order.status = status;
     order.updatedAt = new Date().toISOString();
+    awardLoyaltyForOrder(order); // award points when delivered
     writeJSON(ORDERS_FILE, data);
 
     // Notify the specific waiter when order is ready
@@ -983,6 +1388,7 @@ app.put('/api/orders/:id/items/:itemIndex/status', (req, res) => {
     const newOrderStatus = deriveOrderStatus(order.items);
     order.status = newOrderStatus;
 
+    awardLoyaltyForOrder(order); // award points when delivered
     writeJSON(ORDERS_FILE, data);
 
     // Emit events
@@ -1337,6 +1743,7 @@ io.on('connection', (socket) => {
     if (order) {
       order.status = status;
       order.updatedAt = new Date().toISOString();
+      awardLoyaltyForOrder(order); // award points when delivered
       writeJSON(ORDERS_FILE, fileData);
 
       if (status === 'ready') {

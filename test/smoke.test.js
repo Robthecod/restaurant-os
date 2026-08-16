@@ -111,6 +111,24 @@ test('help report endpoint validates input', async () => {
   assert.strictEqual(res.status, 400);
 });
 
+test('loyalty APIs respond and validate input', async () => {
+  const settings = await fetch(`${BASE}/api/loyalty/settings`);
+  assert.strictEqual(settings.status, 200);
+  const body = await settings.json();
+  assert.ok(body.pointsPerRupee > 0, 'loyalty settings expose earning rules');
+  assert.ok(Array.isArray(body.tiers) && body.tiers.length >= 2, 'settings define tiers');
+
+  const noPhone = await fetch(`${BASE}/api/loyalty/status`);
+  assert.strictEqual(noPhone.status, 400);
+
+  const badRegister = await fetch(`${BASE}/api/loyalty/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'No Phone' }),
+  });
+  assert.strictEqual(badRegister.status, 400);
+});
+
 test('returns 404 for unknown API routes', async () => {
   const res = await fetch(`${BASE}/api/nope`);
   assert.strictEqual(res.status, 404);
