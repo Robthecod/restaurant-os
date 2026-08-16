@@ -29,6 +29,33 @@
       }
     ]
   },
-  "customers": [],
-  "ledger": []
+  "customers": [
+    {
+      "id": 1,
+      "phone": "9867474974",
+      "name": "",
+      "birthday": "",
+      "whatsappOptIn": false,
+      "points": 328,
+      "totalSpent": 328,
+      "visits": 1,
+      "tier": "silver",
+      "pointsEarned": 328,
+      "pointsRedeemed": 0,
+      "createdAt": "2026-08-16T17:37:41.588Z",
+      "lastVisitAt": "2026-08-16T17:44:54.123Z"
+    }
+  ],
+  "ledger": [
+    {
+      "id": 1,
+      "customerId": 1,
+      "phone": "9867474974",
+      "type": "earn",
+      "points": 328,
+      "orderId": 42,
+      "description": "Earned on order #42 (₹328)",
+      "createdAt": "2026-08-16T17:44:54.123Z"
+    }
+  ]
 }

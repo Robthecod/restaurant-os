@@ -216,6 +216,16 @@ function normalizePhone(phone) {
   return String(phone || '').replace(/[^\d]/g, '').replace(/^0+/, '').slice(-10);
 }
 
+// Birthday is compared as MM-DD (e.g. '08-16'). The customer screen's date
+// picker sends YYYY-MM-DD, so normalize both forms to MM-DD here.
+function normalizeBirthday(b) {
+  const s = String(b || '').trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.slice(5); // YYYY-MM-DD → MM-DD
+  if (/^\d{2}-\d{2}$/.test(s)) return s;
+  return s;
+}
+
 function findCustomer(data, phone) {
   return data.customers.find((c) => c.phone === normalizePhone(phone));
 }
@@ -374,12 +384,11 @@ function applyLoyaltyRedemption(data, order, body) {
   const loyalty = readLoyalty();
   const settings = loyalty.settings;
   let customer = findCustomer(loyalty, phone);
-  if (!customer) {
-    customer = {
-      id: loyalty.nextCustomerId++,
-      phone,
-      name: (body.customerName || '').trim(),
-      birthday: (body.customerBirthday || '').trim(),
+  if (!customer) {      customer = {
+        id: loyalty.nextCustomerId++,
+        phone,
+        name: (body.customerName || '').trim(),
+        birthday: normalizeBirthday(body.customerBirthday),
       points: 0,
       totalSpent: 0,
       visits: 0,
@@ -681,7 +690,7 @@ app.post('/api/loyalty/register', (req, res) => {
         id: loyalty.nextCustomerId++,
         phone,
         name: (req.body.name || '').trim(),
-        birthday: (req.body.birthday || '').trim(),
+        birthday: normalizeBirthday(req.body.birthday),
         whatsappOptIn: !!req.body.whatsappOptIn,
         points: 0,
         totalSpent: 0,
@@ -695,7 +704,7 @@ app.post('/api/loyalty/register', (req, res) => {
       loyalty.customers.push(customer);
     } else {
       if (req.body.name) customer.name = String(req.body.name).trim();
-      if (req.body.birthday) customer.birthday = String(req.body.birthday).trim();
+      if (req.body.birthday) customer.birthday = normalizeBirthday(req.body.birthday);
       if (typeof req.body.whatsappOptIn === 'boolean') customer.whatsappOptIn = req.body.whatsappOptIn;
     }
 

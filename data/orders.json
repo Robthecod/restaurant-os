@@ -1,5 +1,5 @@
 {
-  "nextId": 42,
+  "nextId": 44,
   "orders": [
     {
       "id": 1,
@@ -250,6 +250,53 @@
       "status": "delivered",
       "createdAt": "2026-07-30T17:28:14.774Z",
       "updatedAt": "2026-07-30T17:28:32.979Z"
+    },
+    {
+      "id": 42,
+      "tableNumber": "01",
+      "waiterId": 1,
+      "waiterName": "Waiter",
+      "items": [
+        {
+          "name": "Crispy Corn",
+          "quantity": 1,
+          "modifiers": "",
+          "status": "ready"
+        },
+        {
+          "name": "Masala Spring Rolls",
+          "quantity": 1,
+          "modifiers": "",
+          "status": "ready"
+        }
+      ],
+      "status": "delivered",
+      "createdAt": "2026-08-16T17:37:41.588Z",
+      "updatedAt": "2026-08-16T17:44:54.123Z",
+      "customerPhone": "9867474974",
+      "grossTotal": 328,
+      "paidTotal": 328,
+      "loyaltyAwarded": true,
+      "loyaltyEarned": 328
+    },
+    {
+      "id": 43,
+      "tableNumber": "01",
+      "waiterId": 1,
+      "waiterName": "Waiter",
+      "items": [
+        {
+          "name": "Masala Spring Rolls",
+          "quantity": 1,
+          "modifiers": "",
+          "status": "ready"
+        }
+      ],
+      "status": "delivered",
+      "createdAt": "2026-08-16T17:37:48.259Z",
+      "updatedAt": "2026-08-16T17:44:53.395Z",
+      "grossTotal": 239,
+      "paidTotal": 239
     }
   ]
 }
