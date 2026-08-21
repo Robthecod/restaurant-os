@@ -16,8 +16,7 @@
     editingItems: [],      // mutable items array during edit
     socketConnected: false,
     sending: false,          // guard against duplicate order submissions
-    loyaltyPhone: '',        // customer phone for loyalty (optional)
-    loyaltyCustomer: null,   // looked-up customer profile
+    tablePhone: '',          // phone assigned to this table session (loyalty)
   };
 
   // ─── DOM References ────────────────────────────────────────────────
@@ -28,6 +27,7 @@
     // Header
     tableBadge: $('#tableBadge'),
     connDot: $('#connDot'),
+    waiterNameInput: $('#waiterNameInput'),
     ordersToggle: $('#ordersToggle'),
     hamburgerBtn: $('#hamburgerBtn'),
     headerCategoryLabel: $('#headerCategoryLabel'),
@@ -63,9 +63,27 @@
     basketModalTotal: $('#basketModalTotal'),
     basketClose: $('#basketClose'),
     basketSend: $('#basketSend'),
-    basketPhone: $('#basketPhone'),
-    basketPhoneLookup: $('#basketPhoneLookup'),
-    basketLoyaltyStatus: $('#basketLoyaltyStatus'),
+
+    // Floor map picker
+    tableMapBtn: $('#tableMapBtn'),
+    tableMapModal: $('#tableMapModal'),
+    tableMapCanvas: $('#tableMapCanvas'),
+    tableMapClose: $('#tableMapClose'),
+    tableMapCancel: $('#tableMapCancel'),
+    tableMapHint: $('#tableMapHint'),
+
+    // Table phone (loyalty session)
+    tablePhoneChip: $('#tablePhoneChip'),
+    tablePhoneText: $('#tablePhoneText'),
+    waiterPhoneModal: $('#waiterPhoneModal'),
+    waiterPhoneInput: $('#waiterPhoneInput'),
+    waiterPhoneName: $('#waiterPhoneName'),
+    waiterPhoneTableLabel: $('#waiterPhoneTableLabel'),
+    waiterPhoneClose: $('#waiterPhoneClose'),
+    waiterPhoneCancel: $('#waiterPhoneCancel'),
+    waiterPhoneClear: $('#waiterPhoneClear'),
+    waiterPhoneSave: $('#waiterPhoneSave'),
+    waiterCloseTable: $('#waiterCloseTable'),
 
     // Orders Panel
     ordersModal: $('#ordersModal'),
@@ -110,7 +128,8 @@
     waiterIngredientSubmit: $('#waiterIngredientSubmit'),
     // Send back modal
     waiterSendBackModal: $('#waiterSendBackModal'),
-    waiterReturnDishName: $('#waiterReturnDishName'),
+    waiterReturnCategory: $('#waiterReturnCategory'),
+    waiterReturnDishSelect: $('#waiterReturnDishSelect'),
     waiterReturnReason: $('#waiterReturnReason'),
     waiterReturnQty: $('#waiterReturnQty'),
     waiterReturnAmount: $('#waiterReturnAmount'),
@@ -162,7 +181,9 @@
     // Detect table and waiter from URL
     const params = new URLSearchParams(window.location.search);
     state.tableNumber = (params.get('table') || '01').padStart(2, '0');
-    state.waiterName = params.get('waiter') || 'Waiter';
+    state.waiterName =
+      params.get('waiter') || localStorage.getItem('chauka_waiter_name') || 'Waiter';
+    if (dom.waiterNameInput) dom.waiterNameInput.value = state.waiterName === 'Waiter' ? '' : state.waiterName;
     dom.tableBadge.textContent = `Table ${state.tableNumber}`;
     dom.ordersTableNum.textContent = state.tableNumber;
     dom.headerCategoryLabel.textContent = categoryLabels[state.currentCategory];
@@ -172,6 +193,9 @@
     sidebarDom.container = $('#waiterSidebar');
     sidebarDom.items = $('#sidebarItems');
     sidebarDom.toggle = $('#sidebarToggle');
+
+    // Load this table's loyalty session (phone entered once per table)
+    fetchTableSession();
 
     // Setup Socket.io
     setupSocket();
@@ -256,6 +280,172 @@
         renderSidebar();
       }
     });
+
+    // Table session updated (another device assigned a phone to this table)
+    client.on('table_session_updated', (session) => {
+      if (session.tableNumber === state.tableNumber) {
+        state.tablePhone = session.phone || '';
+        updatePhoneChip();
+      }
+    });
+
+    // Table closed (bill paid) — clear this table's phone
+    client.on('table_closed', (data) => {
+      if (data.tableNumber === state.tableNumber) {
+        state.tablePhone = '';
+        updatePhoneChip();
+      }
+    });
+  }
+
+  // ─── Table Phone (loyalty session) ───────────────────────────────────
+  async function fetchTableSession() {
+    try {
+      const res = await fetch(`/api/tables/${state.tableNumber}`);
+      const data = await res.json();
+      state.tablePhone = data.session ? data.session.phone : '';
+      updatePhoneChip();
+    } catch (err) {
+      /* offline — chip stays hidden */
+    }
+  }
+
+  // ─── Table Map Picker ────────────────────────────────────────────────
+  async function openTableMap() {
+    dom.tableMapModal.classList.add('active');
+    dom.tableMapCanvas.innerHTML = '<div class="table-map-empty">Loading floor map…</div>';
+    dom.tableMapHint.style.display = 'none';
+    try {
+      const [mapRes, tablesRes, ordersRes] = await Promise.all([
+        fetch('/api/map'),
+        fetch('/api/tables'),
+        fetch('/api/orders'),
+      ]);
+      const map = (await mapRes.json()).map;
+      const orders = await ordersRes.json();
+      // Compute per-table status: pending (red) = has open orders,
+      // delivered (green) = all items delivered, default (yellow) = no orders.
+      const pendingSet = new Set();
+      const readySet = new Set();
+      const deliveredSet = new Set();
+      for (const o of orders) {
+        if (o.status === 'delivered') deliveredSet.add(o.tableNumber);
+        else if (o.status === 'ready') readySet.add(o.tableNumber);
+        else pendingSet.add(o.tableNumber);
+      }
+      if (!map || !map.tables || map.tables.length === 0) {
+        dom.tableMapCanvas.innerHTML = '';
+        dom.tableMapHint.style.display = 'block';
+        return;
+      }
+      TableMap.render(dom.tableMapCanvas, map, {
+        openOrders: Array.from(pendingSet),
+        readyTables: Array.from(readySet),
+        deliveredTables: Array.from(deliveredSet),
+        forceSquare: true,
+        onClick: (t) => pickTableFromMap(t),
+      });
+    } catch (err) {
+      dom.tableMapCanvas.innerHTML = '<div class="table-map-empty">Could not load the floor map.</div>';
+    }
+  }
+
+  function pickTableFromMap(t) {
+    // Pad like the ?table= URL flow does, so socket events (sessions keyed
+    // '05') and API lookups match the label the manager typed ('5').
+    state.tableNumber = String(t.label).padStart(2, '0');
+    dom.tableBadge.textContent = `Table ${state.tableNumber}`;
+    dom.ordersTableNum.textContent = state.tableNumber;
+    document.title = `Waiter Pad — Table ${state.tableNumber}`;
+    dom.tableMapModal.classList.remove('active');
+    refreshOrders();
+    fetchTableSession();
+    showToast(`Switched to Table ${state.tableNumber}`, 'success');
+  }
+
+  function closeTableMap() {
+    dom.tableMapModal.classList.remove('active');
+  }
+
+  function updatePhoneChip() {
+    if (!dom.tablePhoneChip) return;
+    if (state.tablePhone) {
+      dom.tablePhoneText.textContent = state.tablePhone;
+      dom.tablePhoneChip.style.display = 'inline-flex';
+    } else {
+      dom.tablePhoneChip.style.display = 'none';
+    }
+  }
+
+  function openPhoneModal() {
+    dom.waiterPhoneTableLabel.textContent = state.tableNumber;
+    dom.waiterPhoneInput.value = state.tablePhone;
+    dom.waiterPhoneName.value = '';
+    dom.waiterPhoneClear.style.display = state.tablePhone ? '' : 'none';
+    dom.waiterPhoneModal.classList.add('active');
+    setTimeout(() => dom.waiterPhoneInput.focus(), 100);
+  }
+
+  function closePhoneModal() {
+    dom.waiterPhoneModal.classList.remove('active');
+  }
+
+  async function savePhoneAssignment() {
+    const phone = dom.waiterPhoneInput.value.trim();
+    if (!phone) {
+      showToast('Enter a phone number', 'error');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/tables/${state.tableNumber}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, name: dom.waiterPhoneName.value.trim() }),
+      });
+      if (!res.ok) throw new Error('Failed to assign');
+      state.tablePhone = phone;
+      updatePhoneChip();
+      closePhoneModal();
+      showToast(`📱 ${phone} assigned to Table ${state.tableNumber}`, 'success');
+    } catch (err) {
+      showToast('Could not assign phone', 'error');
+    }
+  }
+
+  async function clearPhoneAssignment() {
+    // Remove the phone from this table (e.g. wrong number entered). Uses the
+    // dedicated /clear endpoint — /close would count a visit for this phone.
+    try {
+      const res = await fetch(`/api/tables/${state.tableNumber}/clear`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed');
+      state.tablePhone = '';
+      updatePhoneChip();
+      closePhoneModal();
+      showToast('Table phone cleared', 'info');
+    } catch (err) {
+      showToast('Could not clear phone', 'error');
+    }
+  }
+
+  async function closeTable() {
+    const msg = state.tablePhone
+      ? `Close Table ${state.tableNumber} for ${state.tablePhone}?\nBill paid — this counts as one visit.`
+      : `Close Table ${state.tableNumber}?`;
+    if (!confirm(msg)) return;
+    try {
+      const res = await fetch(`/api/tables/${state.tableNumber}/close`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      state.tablePhone = '';
+      updatePhoneChip();
+      showToast(
+        data.closed ? `🧾 Table ${state.tableNumber} closed` : 'No open table session',
+        data.closed ? 'success' : 'info'
+      );
+      refreshOrders();
+    } catch (err) {
+      showToast('Could not close table', 'error');
+    }
   }
 
   // ─── Fetch Menu ──────────────────────────────────────────────────────
@@ -319,7 +509,7 @@
         <div class="menu-item ${item.available ? '' : 'unavailable'}" data-id="${item.id}" data-category="${category}" style="animation-delay: ${idx * 30}ms">
           <span class="item-available"></span>
 
-          <span class="item-name">${item.name}</span>
+          <span class="item-name">${escapeHtml(item.name)}</span>
           <span class="item-price">₹${item.price.toFixed(2)}</span>
           <span class="item-tap-hint">Tap to customize</span>
         </div>
@@ -372,36 +562,6 @@
     dom.basketCount.classList.add('basket-bounce');
   }
 
-  // ─── Loyalty Lookup ────────────────────────────────────────────────
-  async function lookupLoyalty() {
-    const phone = dom.basketPhone.value.trim();
-    if (!phone) {
-      state.loyaltyPhone = '';
-      state.loyaltyCustomer = null;
-      dom.basketLoyaltyStatus.textContent = '';
-      return;
-    }
-    try {
-      const res = await fetch(`/api/loyalty/status?phone=${encodeURIComponent(phone)}`);
-      const data = await res.json();
-      if (data.exists) {
-        state.loyaltyPhone = data.customer.phone;
-        state.loyaltyCustomer = data.customer;
-        const medal = data.customer.tier === 'gold' ? '🥇' : data.customer.tier === 'platinum' ? '💎' : '🥈';
-        dom.basketLoyaltyStatus.textContent = `${medal} ${data.customer.name || data.customer.phone} · ${data.customer.points} pts`;
-        dom.basketLoyaltyStatus.className = 'loyalty-row-status found';
-      } else {
-        state.loyaltyPhone = phone;
-        state.loyaltyCustomer = null;
-        dom.basketLoyaltyStatus.textContent = 'New customer — profile will be created';
-        dom.basketLoyaltyStatus.className = 'loyalty-row-status';
-      }
-    } catch (_) {
-      dom.basketLoyaltyStatus.textContent = 'Could not look up';
-      dom.basketLoyaltyStatus.className = 'loyalty-row-status';
-    }
-  }
-
   // ─── Send Order ──────────────────────────────────────────────────────
   async function sendOrder() {
     if (state.basket.length === 0 || state.sending) return;
@@ -423,7 +583,8 @@
         waiterName: state.waiterName,
         items,
       };
-      if (state.loyaltyPhone) body.customerPhone = state.loyaltyPhone;
+      // No customerPhone here — the server pulls it from the table session,
+      // so the phone is entered once per table, not once per order.
 
       const res = await fetch('/api/orders', {
         method: 'POST',
@@ -436,10 +597,6 @@
       const order = await res.json();
       showToast(`Order #${order.id} sent to kitchen!`, 'success');
       state.basket = [];
-      state.loyaltyPhone = '';
-      state.loyaltyCustomer = null;
-      dom.basketPhone.value = '';
-      dom.basketLoyaltyStatus.textContent = '';
       updateBasketUI();
       dom.basketModal.classList.remove('active');
       // Refresh orders to include the new one
@@ -506,8 +663,8 @@
         (item) => `
         <div class="order-item-line">
           <span class="order-item-qty">${item.quantity}×</span>
-          <span class="order-item-name">${item.name}</span>
-          ${item.modifiers ? `          <span class="order-item-mod">${item.modifiers}</span>` : ''}            <span class="order-item-ind-status badge-status status-${item.status || 'pending'}">
+          <span class="order-item-name">${escapeHtml(item.name)}</span>
+          ${item.modifiers ? `          <span class="order-item-mod">${escapeHtml(item.modifiers)}</span>` : ''}            <span class="order-item-ind-status badge-status status-${item.status || 'pending'}">
             ${getStatusLabel(item.status || 'pending').replace(/[^\x00-\x7F]/g, '').trim()}
           </span>
         </div>
@@ -655,9 +812,9 @@
           return `
             <div class="edit-item-row ${isLocked ? 'edit-item-locked' : ''}" data-index="${idx}">
               <div class="edit-item-info">
-                <span class="edit-item-name">${item.name}</span>
+                <span class="edit-item-name">${escapeHtml(item.name)}</span>
                 <span class="edit-item-qty">×${item.quantity}</span>
-                ${item.modifiers ? `<span class="edit-item-mod">${item.modifiers}</span>` : ''}
+                ${item.modifiers ? `<span class="edit-item-mod">${escapeHtml(item.modifiers)}</span>` : ''}
                 ${isLocked ? `<span class="edit-item-badge badge-status status-${itemStatus}">${itemStatus}</span>` : ''}
               </div>
               ${isLocked
@@ -689,7 +846,7 @@
       .map(
         (item) => `
         <div class="edit-menu-item ${item.available ? '' : 'unavailable'}" data-id="${item.id}" data-category="${category}">
-          <span class="edit-menu-item-name">${item.name}</span>
+          <span class="edit-menu-item-name">${escapeHtml(item.name)}</span>
           <span class="edit-menu-item-price">₹${item.price.toFixed(2)}</span>
         </div>
       `
@@ -794,16 +951,16 @@
               <div class="sidebar-item item-status-${itemStatus}">
                 <div class="sidebar-item-left">
                   <div class="sidebar-item-top">
-                    <span class="sidebar-item-name">${item.quantity}× ${item.name}</span>
+                    <span class="sidebar-item-name">${item.quantity}× ${escapeHtml(item.name)}</span>
                     <span class="sidebar-item-status status-${itemStatus}">
                       ${getStatusLabel(itemStatus)}
                     </span>
                   </div>
-                  ${item.modifiers ? `          <span class="sidebar-item-mod">${item.modifiers}</span>` : ''}
+                  ${item.modifiers ? `          <span class="sidebar-item-mod">${escapeHtml(item.modifiers)}</span>` : ''}
                 </div>
                 <div class="sidebar-item-right">
                   ${!isLocked
-                    ? `<button class="sidebar-cancel-btn" data-order-id="${order.id}" data-item-index="${idx}" data-item-name="${item.name}" title="Cancel item">✕</button>`
+                    ? `<button class="sidebar-cancel-btn" data-order-id="${order.id}" data-item-index="${idx}" data-item-name="${escapeHtml(item.name)}" title="Cancel item">✕</button>`
                     : `<span class="sidebar-locked" title="Cooking started — cannot cancel">🔒</span>`
                   }
                 </div>
@@ -1083,13 +1240,33 @@
     });
     dom.basketSend.addEventListener('click', sendOrder);
 
-    // Basket: loyalty lookup
-    dom.basketPhoneLookup.addEventListener('click', lookupLoyalty);
-    dom.basketPhone.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') lookupLoyalty();
-    });
     dom.basketModal.addEventListener('click', (e) => {
       if (e.target === dom.basketModal) dom.basketModal.classList.remove('active');
+    });
+
+    // ─── Table Map Picker ───
+    dom.tableMapBtn.addEventListener('click', openTableMap);
+    dom.tableMapClose.addEventListener('click', closeTableMap);
+    dom.tableMapCancel.addEventListener('click', closeTableMap);
+    dom.tableMapModal.addEventListener('click', (e) => {
+      if (e.target === dom.tableMapModal) closeTableMap();
+    });
+
+    // ─── Table Phone (loyalty session) ───
+    dom.tablePhoneChip.addEventListener('click', openPhoneModal);
+    dom.waiterPhoneSave.addEventListener('click', savePhoneAssignment);
+    dom.waiterPhoneClose.addEventListener('click', closePhoneModal);
+    dom.waiterPhoneCancel.addEventListener('click', closePhoneModal);
+    dom.waiterPhoneClear.addEventListener('click', clearPhoneAssignment);
+    dom.waiterPhoneInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') savePhoneAssignment();
+    });
+    dom.waiterPhoneModal.addEventListener('click', (e) => {
+      if (e.target === dom.waiterPhoneModal) closePhoneModal();
+    });
+    dom.waiterCloseTable.addEventListener('click', () => {
+      dom.waiterDropdown.style.display = 'none';
+      closeTable();
     });
 
     // ─── Orders Panel Events ───
@@ -1202,16 +1379,28 @@
       showToast('🔄 Orders refreshed', 'success');
     });
 
+    // Waiter name (persisted per device)
+    dom.waiterNameInput.addEventListener('change', () => {
+      const name = dom.waiterNameInput.value.trim();
+      state.waiterName = name || 'Waiter';
+      localStorage.setItem('chauka_waiter_name', state.waiterName);
+      showToast(`Orders will show as "${state.waiterName}"`, 'info');
+    });
+
     // Send Back Dish
     dom.waiterSendBackDish.addEventListener('click', () => {
       dom.waiterDropdown.style.display = 'none';
-      dom.waiterReturnDishName.value = '';
+      populateSendBackCategories();
+      dom.waiterReturnCategory.value = '';
+      dom.waiterReturnDishSelect.innerHTML = '<option value="">Select dish…</option>';
       dom.waiterReturnReason.value = '';
       dom.waiterReturnQty.value = '1';
       dom.waiterReturnAmount.value = '';
       dom.waiterSendBackModal.classList.add('active');
-      setTimeout(() => dom.waiterReturnDishName.focus(), 100);
+      setTimeout(() => dom.waiterReturnCategory.focus(), 100);
     });
+    dom.waiterReturnCategory.addEventListener('change', populateSendBackDishes);
+    dom.waiterReturnDishSelect.addEventListener('change', onSendBackDishChange);
 
     function closeSendBackModal() {
       dom.waiterSendBackModal.classList.remove('active');
@@ -1253,7 +1442,9 @@
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (dom.waiterHelpModal.classList.contains('active')) {
+        if (dom.tableMapModal.classList.contains('active')) {
+          closeTableMap();
+        } else if (dom.waiterHelpModal.classList.contains('active')) {
           closeHelpModal();
         } else if (dom.waiterSendBackModal.classList.contains('active')) {
           closeSendBackModal();
@@ -1348,14 +1539,49 @@
   }
 
   // ─── Returned Dish ───────────────────────────────────────────────────
+  function populateSendBackCategories() {
+    const catSel = dom.waiterReturnCategory;
+    if (!state.menu || !catSel) return;
+    const cats = Object.keys(state.menu.categories);
+    catSel.innerHTML =
+      '<option value="">Select category…</option>' +
+      cats
+        .map(
+          (c) =>
+            `<option value="${c}">${categoryLabels[c] || c.charAt(0).toUpperCase() + c.slice(1)}</option>`
+        )
+        .join('');
+  }
+
+  function populateSendBackDishes() {
+    const cat = dom.waiterReturnCategory.value;
+    const dishSel = dom.waiterReturnDishSelect;
+    dom.waiterReturnAmount.value = '';
+    if (!cat || !state.menu || !state.menu.categories[cat]) {
+      dishSel.innerHTML = '<option value="">Select dish…</option>';
+      return;
+    }
+    const items = state.menu.categories[cat].filter((i) => i.available !== false);
+    dishSel.innerHTML =
+      '<option value="">Select dish…</option>' +
+      items
+        .map((i) => `<option value="${i.name}" data-price="${i.price}">${i.name} — ₹${i.price}</option>`)
+        .join('');
+  }
+
+  function onSendBackDishChange() {
+    const opt = dom.waiterReturnDishSelect.selectedOptions[0];
+    dom.waiterReturnAmount.value = opt && opt.dataset.price ? opt.dataset.price : '';
+  }
+
   async function submitReturnedDish() {
-    const dishName = dom.waiterReturnDishName.value.trim();
+    const dishName = dom.waiterReturnDishSelect.value.trim();
     const reason = dom.waiterReturnReason.value.trim() || 'Incorrectly prepared';
     const quantity = parseInt(dom.waiterReturnQty.value) || 1;
     const amount = parseFloat(dom.waiterReturnAmount.value);
 
     if (!dishName || isNaN(amount) || amount <= 0) {
-      showToast('Please enter dish name and amount', 'error');
+      showToast('Select a dish from the menu first', 'error');
       return;
     }
 
@@ -1400,8 +1626,8 @@
         (b, i) => `
         <div class="basket-item" data-index="${i}">
           <div class="basket-item-info">
-            <div class="basket-item-name">${b.name}</div>
-            ${b.modifiers ? `<div class="basket-item-mod">📝 ${b.modifiers}</div>` : ''}
+            <div class="basket-item-name">${escapeHtml(b.name)}</div>
+            ${b.modifiers ? `<div class="basket-item-mod">📝 ${escapeHtml(b.modifiers)}</div>` : ''}
             <div class="basket-item-qty">Qty: ${b.quantity}</div>
           </div>
           <div class="basket-item-price">₹${(b.price * b.quantity).toFixed(2)}</div>
@@ -1424,6 +1650,13 @@
     });
 
     dom.basketModal.classList.add('active');
+  }
+
+  // ─── HTML Escape (prevents XSS from menu item names/modifiers) ────
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (ch) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])
+    );
   }
 
   // ─── Time Ago Helper ─────────────────────────────────────────────────

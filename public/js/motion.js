@@ -138,12 +138,21 @@
   }
 
   // ─── Scroll-Driven Opacity Transform (Spring Reveal) ────────────────
-  // Similar to reveal-spring but tracks scroll position for smooth effect
+  // Similar to reveal-spring but tracks scroll position for smooth effect.
+  // Content must NEVER stay hidden: the reveal only hides *while animating*,
+  // so reduced-motion users and elements the observer misses (e.g. revealed
+  // from a display:none view on a tab switch) are force-revealed.
   function initScrollReveal(selector, opts) {
     opts = opts || {};
     var threshold = opts.threshold || 0.08;
     var els = document.querySelectorAll(selector || '.reveal-spring');
     if (!els.length) return;
+
+    // Reduced motion: reveal instantly, no animation.
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      els.forEach(function (el) { el.classList.add('visible'); });
+      return;
+    }
 
     var observer = new IntersectionObserver(
       function (entries) {
@@ -158,6 +167,22 @@
     );
 
     els.forEach(function (el) { observer.observe(el); });
+
+    // Safety net: IntersectionObserver can miss elements that were inside a
+    // display:none container when observed (tab views) or that were already
+    // on screen. Reveal anything still hidden shortly after init — either it
+    // is on screen (missed callback) or it lives in a hidden view that will
+    // be shown later (e.g. a tab switch), where it must appear instantly.
+    setTimeout(function () {
+      els.forEach(function (el) {
+        if (el.classList.contains('visible')) return;
+        var rect = el.getBoundingClientRect();
+        var rendered = rect.width > 0 || rect.height > 0;
+        if (!rendered || (rect.top < window.innerHeight && rect.bottom > 0)) {
+          el.classList.add('visible');
+        }
+      });
+    }, 900);
   }
 
   // ─── Smooth Background Shift Based on Scroll ─────────────────────────

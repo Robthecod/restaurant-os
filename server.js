@@ -42,6 +42,7 @@ const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 const KITCHEN_FILE = path.join(DATA_DIR, 'kitchen.json');
 const LICENSE_FILE = path.join(DATA_DIR, 'license.json');
 const LOYALTY_FILE = path.join(DATA_DIR, 'customers.json');
+const TABLES_FILE = path.join(DATA_DIR, 'tables.json');
 
 // Shared static assets for the app screens (style.css, motion.js, manifest,
 // sw.js, icons) — served at root. The restaurant screens live in /app/.
@@ -175,6 +176,10 @@ initDataFile(MENU_FILE, {
 initDataFile(ORDERS_FILE, { nextId: 1, orders: [] });
 initDataFile(KITCHEN_FILE, { nextIngredientId: 1, nextReturnId: 1, nextHelpId: 1, ingredientRequests: [], returnedDishes: [], helpReports: [] });
 initDataFile(LICENSE_FILE, { installId: null, lastVerifiedAt: null, lastCheckedAt: null, locked: false });
+initDataFile(TABLES_FILE, {
+  map: { width: 800, height: 500, image: null, tables: [] },
+  sessions: {},
+});
 
 // ─── LOYALTY / CUSTOMER REWARDS ─────────────────────────────────────────
 // Phone-based loyalty: guests earn points on delivered orders, can redeem
@@ -183,7 +188,7 @@ initDataFile(LICENSE_FILE, { installId: null, lastVerifiedAt: null, lastCheckedA
 // redemptions are the attractive path.
 
 const LOYALTY_DEFAULTS = {
-  pointsPerRupee: 1,     // 1 point per ₹1 spent (before tier multiplier)
+  pointsPerHundred: 100, // 100 points per ₹100 spent (before tier multiplier)
   discountSpendPct: 0.1, // points required for a discount = 10% of the bill
   discountValuePct: 0.5, // each point spent = ₹0.50 off (10% of bill → 5% off)
   birthdayBonus: 200,
@@ -205,7 +210,14 @@ initDataFile(LOYALTY_FILE, {
 });
 
 function readLoyalty() {
-  return readJSON(LOYALTY_FILE);
+  const data = readJSON(LOYALTY_FILE);
+  // Migrate legacy "points per ₹1" → "points per ₹100" (1 pt/₹1 = 100 pts/₹100)
+  if (data.settings && data.settings.pointsPerRupee != null && data.settings.pointsPerHundred == null) {
+    data.settings.pointsPerHundred = Math.round(data.settings.pointsPerRupee * 100);
+    delete data.settings.pointsPerRupee;
+    writeLoyalty(data);
+  }
+  return data;
 }
 
 function writeLoyalty(data) {
@@ -306,12 +318,10 @@ function awardLoyaltyForOrder(order) {
     const menu = readJSON(MENU_FILE);
     const total = orderTotalFromMenu(order, menu);
 
-    customer.visits++;
     customer.totalSpent += total;
-    customer.lastVisitAt = new Date().toISOString();
     customer.tier = computeTier(settings, customer.totalSpent).key;
 
-    let earned = Math.floor(total / settings.pointsPerRupee);
+    let earned = Math.floor((total / 100) * settings.pointsPerHundred);
     const tier = settings.tiers.find((t) => t.key === customer.tier) || settings.tiers[0];
     earned = Math.floor(earned * (tier.multiplier || 1));
 
@@ -348,21 +358,9 @@ function awardLoyaltyForOrder(order) {
       });
     }
 
-    // 🏅 Visit streak bonus
-    if (settings.streakEvery > 0 && customer.visits % settings.streakEvery === 0 && settings.streakBonus > 0) {
-      customer.points += settings.streakBonus;
-      customer.pointsEarned += settings.streakBonus;
-      bonusEarned += settings.streakBonus;
-      addLedger(loyalty, {
-        customerId: customer.id,
-        phone,
-        type: 'streak',
-        points: settings.streakBonus,
-        orderId: order.id,
-        description: `🏅 ${customer.visits}th visit bonus`,
-        createdAt: new Date().toISOString(),
-      });
-    }
+    // Visits + streak bonus are NOT awarded per order — they're counted
+    // once when the table is closed (bill paid), see finalizeTableVisit().
+    // Within a 4-hour window, multiple closes count as the same visit.
 
     order.loyaltyAwarded = true;
     order.loyaltyEarned = earned + bonusEarned;
@@ -485,6 +483,11 @@ function applyLoyaltyRedemption(data, order, body) {
 // Restaurant's WhatsApp number (with country code, digits only, e.g. '919876543210')
 // Used for free wa.me deep links on the customer screen and in the manager panel.
 const WHATSAPP_NUMBER = (process.env.WHATSAPP_NUMBER || '').replace(/[^\d]/g, '');
+
+// Optional PIN protecting manager-only mutations (menu + loyalty settings).
+// When set, the manager panel asks for it and sends it as an `x-manager-pin`
+// header on every mutating call. Leave unset for open LAN use.
+const MANAGER_PIN = process.env.MANAGER_PIN || '';
 
 const LICENSE_KEY = process.env.LICENSE_KEY || '';
 const LICENSE_SERVER_URL = (process.env.LICENSE_SERVER_URL || '').replace(/\/+$/, '');
@@ -651,21 +654,39 @@ function scheduleNextCheck() {
     return;
   }
 
-  // Default: once daily at the configured morning hour
+  // Default: three times daily — 10 AM, 6 PM, 9 PM
+  const CHECK_TIMES = [10, 18, 21]; // hours in 24h format
   const now = new Date();
-  const next = new Date(now);
-  next.setHours(LICENSE_CHECK_HOUR, 0, 0, 0);
-  if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
+
+  // Find the next check time that is still in the future today
+  let next = null;
+  for (const h of CHECK_TIMES) {
+    const candidate = new Date(now);
+    candidate.setHours(h, 0, 0, 0);
+    if (candidate.getTime() > now.getTime()) {
+      next = candidate;
+      break;
+    }
+  }
+  // All today's checks are past — schedule for tomorrow's first check
+  if (!next) {
+    next = new Date(now);
+    next.setDate(next.getDate() + 1);
+    next.setHours(CHECK_TIMES[0], 0, 0, 0);
+  }
+
+  const delayMs = next.getTime() - now.getTime();
   setTimeout(() => {
     runLicenseCheck();
     scheduleNextCheck();
-  }, next.getTime() - now.getTime());
-  console.log('  License: next verification ' + next.toLocaleString());
+  }, delayMs);
+  const hrsLeft = Math.round(delayMs / 3600000);
+  console.log('  License: next verification ' + next.toLocaleString() + ' (~' + hrsLeft + 'h)');
 }
 
 // ─── Middleware ──────────────────────────────────────────────────────────
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // floor-plan images arrive as data URLs
 // ─── LOYALTY API ─────────────────────────────────────────────────────────
 
 // GET /api/loyalty/settings — public earning/redemption rules
@@ -740,11 +761,11 @@ app.get('/api/loyalty/ledger', (req, res) => {
 });
 
 // POST /api/loyalty/settings — manager updates rules
-app.post('/api/loyalty/settings', (req, res) => {
+app.post('/api/loyalty/settings', requireManagerAuth, (req, res) => {
   try {
     const loyalty = readLoyalty();
     const s = loyalty.settings;
-    if (req.body.pointsPerRupee != null) s.pointsPerRupee = Math.max(1, parseFloat(req.body.pointsPerRupee) || 1);
+    if (req.body.pointsPerHundred != null) s.pointsPerHundred = Math.max(1, parseFloat(req.body.pointsPerHundred) || 1);
     if (req.body.discountSpendPct != null) s.discountSpendPct = Math.min(1, Math.max(0, parseFloat(req.body.discountSpendPct) || 0));
     if (req.body.discountValuePct != null) s.discountValuePct = Math.min(1, Math.max(0, parseFloat(req.body.discountValuePct) || 0));
     if (req.body.birthdayBonus != null) s.birthdayBonus = Math.max(0, parseInt(req.body.birthdayBonus, 10) || 0);
@@ -767,6 +788,268 @@ app.post('/api/loyalty/settings', (req, res) => {
   }
 });
 
+// ─── TABLE SESSIONS (loyalty phone assignment) ─────────────────────────
+// A "table session" ties a phone number (and optional name) to a table so
+// the waiter enters it ONCE and every order from that table automatically
+// earns points for that customer. Closing the session (bill paid) clears
+// the phone and counts exactly ONE visit — orders within a session no
+// longer count as separate visits.
+
+function readTables() {
+  return readJSON(TABLES_FILE);
+}
+
+function writeTables(data) {
+  writeJSON(TABLES_FILE, data);
+}
+
+function tableKey(n) {
+  return String(n == null ? '' : n).padStart(2, '0');
+}
+
+function getTableSession(tableNumber) {
+  const tables = readTables();
+  return tables.sessions[tableKey(tableNumber)] || null;
+}
+
+function emitTableSession(tableNumber, session) {
+  io.emit('table_session_updated', {
+    tableNumber,
+    phone: session.phone,
+    name: session.name,
+    ordersCount: session.ordersCount || 0,
+    openedAt: session.openedAt,
+    lastOrderAt: session.lastOrderAt || null,
+  });
+}
+
+// Attach (or replace) a phone on a table's session
+function upsertTableSession(tableNumber, { phone, name } = {}) {
+  const tables = readTables();
+  const key = tableKey(tableNumber);
+  const existing = tables.sessions[key];
+  const now = new Date().toISOString();
+  const session = {
+    phone: normalizePhone(phone) || (existing && existing.phone) || '',
+    name: String(name != null ? name : (existing && existing.name) || '').trim(),
+    ordersCount: (existing && existing.ordersCount) || 0,
+    openedAt: (existing && existing.openedAt) || now,
+    lastOrderAt: (existing && existing.lastOrderAt) || null,
+  };
+  tables.sessions[key] = session;
+  writeTables(tables);
+  emitTableSession(key, session);
+  return session;
+}
+
+// Bump order activity on a session (called when an order is placed)
+function touchTableSession(tableNumber) {
+  const tables = readTables();
+  const key = tableKey(tableNumber);
+  const s = tables.sessions[key];
+  if (!s) return null;
+  s.ordersCount = (s.ordersCount || 0) + 1;
+  s.lastOrderAt = new Date().toISOString();
+  writeTables(tables);
+  return s;
+}
+
+// One visit per closed table session: increments the customer's visit
+// count and awards the visit-streak bonus on every Nth visit.
+function finalizeTableVisit(phone) {
+  const p = normalizePhone(phone);
+  if (!p) return;
+  const loyalty = readLoyalty();
+  const settings = loyalty.settings;
+  const customer = findCustomer(loyalty, p);
+  if (!customer) return;
+
+  // Only count as a new visit if the last visit was more than 4 hours ago.
+  // Within a 4-hour window, multiple table closes count as the same visit
+  // so the waiter doesn't need to re-enter the phone each time.
+  const VISIT_WINDOW_MS = 4 * 60 * 60 * 1000; // 4 hours
+  const now = new Date();
+  const lastVisit = customer.lastVisitAt ? new Date(customer.lastVisitAt) : null;
+  const isNewVisit = !lastVisit || (now - lastVisit) > VISIT_WINDOW_MS;
+
+  if (isNewVisit) customer.visits++;
+  customer.lastVisitAt = now.toISOString();
+
+  if (isNewVisit && settings.streakEvery > 0 && customer.visits % settings.streakEvery === 0 && settings.streakBonus > 0) {
+    customer.points += settings.streakBonus;
+    customer.pointsEarned += settings.streakBonus;
+    addLedger(loyalty, {
+      customerId: customer.id,
+      phone: p,
+      type: 'streak',
+      points: settings.streakBonus,
+      description: `🏅 ${customer.visits}th visit bonus`,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  writeLoyalty(loyalty);
+  io.emit('loyalty_updated', loyaltyCustomerPublic(customer));
+  console.log(`  Loyalty: visit #${customer.visits} for ${p}`);
+}
+
+// GET /api/tables — all open table sessions (for waiters / manager)
+app.get('/api/tables', (req, res) => {
+  const tables = readTables();
+  res.json({
+    sessions: Object.entries(tables.sessions).map(([tableNumber, s]) => ({
+      tableNumber,
+      phone: s.phone,
+      name: s.name || '',
+      ordersCount: s.ordersCount || 0,
+      openedAt: s.openedAt,
+      lastOrderAt: s.lastOrderAt || null,
+    })),
+  });
+});
+
+// GET /api/tables/:table — one table's session (customer screen prefill)
+app.get('/api/tables/:table', (req, res) => {
+  const s = getTableSession(req.params.table);
+  if (!s) return res.json({ session: null });
+  res.json({
+    session: {
+      tableNumber: tableKey(req.params.table),
+      phone: s.phone,
+      name: s.name || '',
+      ordersCount: s.ordersCount || 0,
+      openedAt: s.openedAt,
+      lastOrderAt: s.lastOrderAt || null,
+    },
+  });
+});
+
+// POST /api/tables/:table/assign — attach a phone (+ optional name) to a table
+app.post('/api/tables/:table/assign', (req, res) => {
+  const phone = normalizePhone(req.body && req.body.phone);
+  if (!phone) return res.status(400).json({ error: 'A valid phone number is required' });
+  const session = upsertTableSession(req.params.table, {
+    phone,
+    name: req.body && req.body.name,
+  });
+  console.log(`  Table ${tableKey(req.params.table)}: phone ${phone} assigned`);
+  res.status(201).json({ session });
+});
+
+// POST /api/tables/:table/close — bill paid: clear the phone, count the visit
+app.post('/api/tables/:table/close', (req, res) => {
+  const tables = readTables();
+  const key = tableKey(req.params.table);
+  const session = tables.sessions[key];
+  if (!session) return res.json({ closed: false, message: 'No open session for this table' });
+
+  delete tables.sessions[key];
+  writeTables(tables);
+
+  if ((session.ordersCount || 0) > 0 && session.phone) {
+    finalizeTableVisit(session.phone);
+  }
+
+  io.emit('table_closed', { tableNumber: key, phone: session.phone || null });
+  console.log(`  Table ${key}: session closed${session.phone ? ' (visit counted for ' + session.phone + ')' : ''}`);
+  res.json({ closed: true, phone: session.phone || null });
+});
+
+// POST /api/tables/:table/clear — remove a phone/session WITHOUT counting a
+// visit. Used when the wrong number was entered or the party left early —
+// unlike /close, this never awards visits or streak bonuses.
+app.post('/api/tables/:table/clear', (req, res) => {
+  const tables = readTables();
+  const key = tableKey(req.params.table);
+  if (!tables.sessions[key]) return res.json({ cleared: false, message: 'No open session for this table' });
+
+  delete tables.sessions[key];
+  writeTables(tables);
+
+  io.emit('table_closed', { tableNumber: key, phone: null });
+  console.log(`  Table ${key}: session cleared (no visit counted)`);
+  res.json({ cleared: true });
+});
+
+// ─── FLOOR MAP (table registry + floor plan) ───────────────────────────
+// The manager sketches the restaurant layout (free-form: uploaded floor
+// photo or drawn background) and places tables on it, each with a
+// customizable label that IS the table number used across the system.
+
+const FLOORPLAN_DIR = path.join(__dirname, 'public', 'floorplans');
+
+function readMap() {
+  const data = readJSON(TABLES_FILE);
+  return Object.assign({ width: 800, height: 500, image: null, tables: [] }, data.map || {});
+}
+
+function writeMap(map) {
+  const data = readJSON(TABLES_FILE);
+  data.map = map;
+  writeJSON(TABLES_FILE, data);
+}
+
+function sanitizeTable(t) {
+  return {
+    id: String((t && t.id) || 't' + Math.random().toString(36).slice(2, 8)),
+    label: String((t && t.label) || '').trim().slice(0, 12) || 'Table',
+    x: Math.min(100, Math.max(0, parseFloat(t && t.x) || 50)),
+    y: Math.min(100, Math.max(0, parseFloat(t && t.y) || 50)),
+    w: Math.min(30, Math.max(3, parseFloat(t && t.w) || 8)),
+    h: Math.min(30, Math.max(3, parseFloat(t && t.h) || 8)),
+    shape: t && ['circle', 'square', 'rectangle'].includes(t.shape) ? t.shape : 'circle',
+  };
+}
+
+// Persist an uploaded floor-plan image (data URL) and return its URL path.
+function saveFloorplanImage(dataUrl) {
+  const m = /^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/.exec(dataUrl);
+  if (!m) return null;
+  const ext = m[1] === 'jpeg' ? 'jpg' : m[1];
+  fs.mkdirSync(FLOORPLAN_DIR, { recursive: true });
+  // Remove any previous floor plan so only one stays on disk
+  for (const f of fs.readdirSync(FLOORPLAN_DIR)) {
+    if (f.startsWith('map.')) fs.unlinkSync(path.join(FLOORPLAN_DIR, f));
+  }
+  fs.writeFileSync(path.join(FLOORPLAN_DIR, 'map.' + ext), Buffer.from(m[2], 'base64'));
+  return '/floorplans/map.' + ext;
+}
+
+function removeFloorplanImage() {
+  if (!fs.existsSync(FLOORPLAN_DIR)) return;
+  for (const f of fs.readdirSync(FLOORPLAN_DIR)) {
+    if (f.startsWith('map.')) fs.unlinkSync(path.join(FLOORPLAN_DIR, f));
+  }
+}
+
+// GET /api/map — the floor map (tables + background)
+app.get('/api/map', (req, res) => {
+  res.json({ map: readMap() });
+});
+
+// POST /api/map — save the floor map (manager only)
+app.post('/api/map', requireManagerAuth, (req, res) => {
+  const body = req.body || {};
+  let image = null;
+  if (typeof body.image === 'string' && body.image.startsWith('/floorplans/')) {
+    image = body.image; // unchanged path
+  } else if (typeof body.image === 'string' && body.image.startsWith('data:image/')) {
+    image = saveFloorplanImage(body.image); // newly uploaded
+    if (!image) return res.status(400).json({ error: 'Unsupported image format' });
+  } else {
+    removeFloorplanImage(); // image removed
+  }
+
+  const map = {
+    width: Math.min(4000, Math.max(200, parseInt(body.width, 10) || 800)),
+    height: Math.min(3000, Math.max(150, parseInt(body.height, 10) || 500)),
+    image,
+    tables: Array.isArray(body.tables) ? body.tables.map(sanitizeTable) : [],
+  };
+  writeMap(map);
+  io.emit('map_updated', map);
+  res.json({ map });
+});
 
 // CORS for cross-origin requests from tablets
 app.use((req, res, next) => {
@@ -797,7 +1080,7 @@ app.get('/api/license/status', (req, res) => {
     lastCheckedAt: license.lastCheckedAt,
     lastReason: license.lastReason,
     graceDays: LICENSE_GRACE_DAYS,
-    checkHour: LICENSE_CHECK_HOUR,
+    checkTimes: [10, 18, 21],
   });
 });
 
@@ -817,6 +1100,36 @@ app.post('/api/license/check', (req, res) => {
   });
 });
 
+// ─── MANAGER ACCESS (PIN) ──────────────────────────────────────────────
+// Optional: protects manager-only mutations (menu CRUD + loyalty settings)
+// with a PIN. Set MANAGER_PIN on the server; when set, the manager panel
+// asks for the PIN and sends it as an `x-manager-pin` header on every
+// mutating call. Placed before the license lockdown middleware so login
+// still works while locked (the license overlay handles that state).
+
+// GET /api/manager/config — tells the manager screen whether a PIN is required
+app.get('/api/manager/config', (req, res) => {
+  res.json({ pinRequired: !!MANAGER_PIN });
+});
+
+// POST /api/manager/login — verify the PIN (client keeps it for the session)
+app.post('/api/manager/login', (req, res) => {
+  if (!MANAGER_PIN) return res.json({ ok: true, pinRequired: false });
+  const pin = String(req.body && req.body.pin != null ? req.body.pin : '');
+  if (pin === MANAGER_PIN) return res.json({ ok: true, pinRequired: true });
+  return res.status(401).json({ error: 'Invalid PIN' });
+});
+
+function requireManagerAuth(req, res, next) {
+  if (!MANAGER_PIN) return next();
+  const pin = String(req.headers['x-manager-pin'] || '');
+  if (pin === MANAGER_PIN) return next();
+  return res.status(401).json({
+    error: 'MANAGER_PIN_REQUIRED',
+    message: 'Manager PIN required to make changes.',
+  });
+}
+
 // ─── LICENSE LOCKDOWN MIDDLEWARE ─────────────────────────────────────────
 // When locked, reject all mutating /api requests (HTTP 402). Read-only GET
 // requests stay available so staff can still view data.
@@ -834,7 +1147,7 @@ app.use('/api', (req, res, next) => {
 // ─── CATEGORY MANAGEMENT API ─────────────────────────────────────────────
 
 // POST /api/menu/category — Add a new category
-app.post('/api/menu/category', (req, res) => {
+app.post('/api/menu/category', requireManagerAuth, (req, res) => {
   try {
     const menu = readJSON(MENU_FILE);
     const { key, name } = req.body;
@@ -1082,7 +1395,7 @@ app.get('/api/menu', (req, res) => {
 });
 
 // POST /api/menu — Add a new menu item
-app.post('/api/menu', (req, res) => {
+app.post('/api/menu', requireManagerAuth, (req, res) => {
   try {
     const menu = readJSON(MENU_FILE);
     const { category, name, price } = req.body;
@@ -1117,7 +1430,7 @@ app.post('/api/menu', (req, res) => {
 });
 
 // PUT /api/menu/:id — Update a menu item
-app.put('/api/menu/:id', (req, res) => {
+app.put('/api/menu/:id', requireManagerAuth, (req, res) => {
   try {
     const menu = readJSON(MENU_FILE);
     const itemId = parseInt(req.params.id);
@@ -1144,7 +1457,7 @@ app.put('/api/menu/:id', (req, res) => {
 });
 
 // DELETE /api/menu/:id — Remove a menu item
-app.delete('/api/menu/:id', (req, res) => {
+app.delete('/api/menu/:id', requireManagerAuth, (req, res) => {
   try {
     const menu = readJSON(MENU_FILE);
     const itemId = parseInt(req.params.id);
@@ -1226,6 +1539,17 @@ app.post('/api/orders/customer', (req, res) => {
       updatedAt: new Date().toISOString(),
     };
 
+    // Loyalty: remember the customer's phone on the table session so they
+    // enter it once — later orders from the same table reuse it.
+    const tableNum = String(tableNumber).padStart(2, '0');
+    if (normalizePhone(req.body.customerPhone)) {
+      upsertTableSession(tableNum, {
+        phone: req.body.customerPhone,
+        name: req.body.customerName,
+      });
+    }
+    touchTableSession(tableNum);
+
     // Loyalty: attach phone + process point redemptions (free items / discount)
     const loyaltyResult = applyLoyaltyRedemption(data, order, req.body);
     if (loyaltyResult && loyaltyResult.error) {
@@ -1278,6 +1602,15 @@ app.post('/api/orders', (req, res) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    // Loyalty: the phone lives on the TABLE session (entered once when the
+    // table opens) — every order from the table picks it up automatically.
+    const tableNum = String(tableNumber).padStart(2, '0');
+    if (!normalizePhone(req.body.customerPhone)) {
+      const session = getTableSession(tableNum);
+      if (session && session.phone) req.body.customerPhone = session.phone;
+    }
+    touchTableSession(tableNum);
 
     // Loyalty: attach phone + process point redemptions (free items / discount)
     const loyaltyResult = applyLoyaltyRedemption(data, order, req.body);

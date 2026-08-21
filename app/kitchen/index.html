@@ -32,6 +32,8 @@
 
       </span>
       <span class="connection-dot" id="connDot" title="Connection Status"></span>
+      <button class="kds-voice-btn" id="kdsVoiceBtn" title="Toggle voice announcements"
+        style="background:none;border:none;font-size:1.25rem;cursor:pointer;color:var(--text-secondary);padding:4px 6px;border-radius:6px;transition:background 0.15s;line-height:1;">🔊</button>
       <div class="kds-actions-menu" style="position:relative;display:inline-block;">
         <button class="kds-menu-btn" id="kdsMenuBtn" title="More Options" style="background:none;border:none;color:var(--text-secondary);font-size:1.4rem;cursor:pointer;padding:4px 8px;border-radius:6px;transition:background 0.15s;line-height:1;">⋮</button>
         <div class="kds-dropdown" id="kdsDropdown" style="display:none;position:absolute;right:0;top:100%;background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;box-shadow:var(--shadow-lg);z-index:100;min-width:220px;padding:6px;margin-top:4px;">
@@ -47,6 +49,11 @@
           <button class="kds-dropdown-item" id="kdsRefreshOrders" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;color:var(--text-primary);font-size:0.88rem;font-weight:500;cursor:pointer;border-radius:6px;transition:background 0.12s;text-align:left;font-family:var(--font);">
             <span style="font-size:1.1rem;">🔄</span>
             <span>Refresh Orders</span>
+          </button>
+          <div style="height:1px;background:var(--border-color);margin:4px 10px;"></div>
+          <button class="kds-dropdown-item" id="kdsVoiceToggle" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;color:var(--text-primary);font-size:0.88rem;font-weight:500;cursor:pointer;border-radius:6px;transition:background 0.12s;text-align:left;font-family:var(--font);">
+            <span style="font-size:1.1rem;">🔊</span>
+            <span>Voice Announcements: <b>On</b></span>
           </button>
         </div>
       </div>

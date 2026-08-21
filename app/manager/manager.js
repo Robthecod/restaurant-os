@@ -8,6 +8,7 @@
     socketConnected: false,
     openRequests: [], // open ingredient requests
     openReports: [], // open help/complaint reports
+    pin: sessionStorage.getItem('chauka_manager_pin') || '', // manager PIN (session)
   };
 
   // ─── DOM References ────────────────────────────────────────────────
@@ -53,7 +54,7 @@
     loyaltyAdminLoading: $('#loyaltyAdminLoading'),
     loyaltyAdminContent: $('#loyaltyAdminContent'),
     loyaltySaveRules: $('#loyaltySaveRules'),
-    loyaltyRulePerRupee: $('#loyaltyRulePerRupee'),
+    loyaltyRulePerHundred: $('#loyaltyRulePerHundred'),
     loyaltyRuleSpendPct: $('#loyaltyRuleSpendPct'),
     loyaltyRuleValuePct: $('#loyaltyRuleValuePct'),
     loyaltyRuleBirthday: $('#loyaltyRuleBirthday'),
@@ -69,6 +70,25 @@
     notifDropdown: $('#notifDropdown'),
     notifDropdownBody: $('#notifDropdownBody'),
     notifDropdownClose: $('#notifDropdownClose'),
+    // PIN gate
+    mgrPinGate: $('#mgrPinGate'),
+    mgrPinInput: $('#mgrPinInput'),
+    mgrPinError: $('#mgrPinError'),
+    mgrPinSubmit: $('#mgrPinSubmit'),
+    // Floor map
+    mapView: $('#mapView'),
+    mapImageInput: $('#mapImageInput'),
+    mapUploadBtn: $('#mapUploadBtn'),
+    mapRemoveImageBtn: $('#mapRemoveImageBtn'),
+    mapAddTableBtn: $('#mapAddTableBtn'),
+    mapLiveToggle: $('#mapLiveToggle'),
+    mapSaveBtn: $('#mapSaveBtn'),
+    mapProps: $('#mapProps'),
+    mapLabelInput: $('#mapLabelInput'),
+    mapShapeSelect: $('#mapShapeSelect'),
+    mapDeleteBtn: $('#mapDeleteBtn'),
+    mapCanvas: $('#mapCanvas'),
+    mapHint: $('#mapHint'),
   };
 
   // ─── Init ────────────────────────────────────────────────────────────
@@ -79,6 +99,82 @@
     fetchOpenRequests();
     fetchOpenReports();
     setupEventListeners();
+    setupPinGateListeners();
+    setupMapListeners();
+    enforcePinGate();
+  }
+
+  // ─── Manager PIN Gate ────────────────────────────────────────────────
+  async function enforcePinGate() {
+    try {
+      const res = await fetch('/api/manager/config');
+      const cfg = await res.json();
+      if (!cfg.pinRequired || state.pin) return;
+      showPinGate();
+    } catch (err) {
+      /* endpoint missing → open access */
+    }
+  }
+
+  function showPinGate() {
+    dom.mgrPinGate.classList.add('active');
+    setTimeout(() => dom.mgrPinInput.focus(), 100);
+  }
+
+  function hidePinGate() {
+    dom.mgrPinGate.classList.remove('active');
+    dom.mgrPinError.style.display = 'none';
+    dom.mgrPinInput.value = '';
+  }
+
+  async function submitPin() {
+    const pin = dom.mgrPinInput.value.trim();
+    if (!pin) return;
+    try {
+      const res = await fetch('/api/manager/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      });
+      if (res.ok) {
+        state.pin = pin;
+        sessionStorage.setItem('chauka_manager_pin', pin);
+        hidePinGate();
+        showToast('Manager unlocked', 'success');
+      } else {
+        dom.mgrPinError.style.display = 'block';
+        dom.mgrPinInput.value = '';
+        dom.mgrPinInput.focus();
+      }
+    } catch (err) {
+      showToast('Could not reach server', 'error');
+    }
+  }
+
+  function setupPinGateListeners() {
+    dom.mgrPinSubmit.addEventListener('click', submitPin);
+    dom.mgrPinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitPin();
+    });
+  }
+
+  // Attach the PIN header to mutating manager calls when one is set
+  function authHeaders(extra) {
+    const headers = Object.assign({}, extra);
+    if (state.pin) headers['x-manager-pin'] = state.pin;
+    return headers;
+  }
+
+  // If a manager call bounces with 401 (wrong/missing PIN), re-lock the panel
+  function handleAuthError(res) {
+    if (res.status === 401) {
+      state.pin = '';
+      sessionStorage.removeItem('chauka_manager_pin');
+      showPinGate();
+      showToast('Manager PIN required', 'error');
+      return true;
+    }
+    return false;
   }
 
   // ─── Socket ──────────────────────────────────────────────────────────
@@ -147,6 +243,208 @@
       updateBadge();
       updateDropdown();
     });
+
+    // Floor map + live status refreshes
+    client.on('map_updated', (map) => {
+      mapState.map = map;
+      if (dom.mapView.style.display !== 'none') renderMap();
+    });
+    client.on('table_session_updated', () => fetchMapStatus());
+    client.on('table_closed', () => fetchMapStatus());
+    client.on('kitchen_new_order', () => fetchMapStatus());
+    client.on('order_updated', () => fetchMapStatus());
+    client.on('order_deleted', () => fetchMapStatus());
+  }
+
+  // ─── Floor Map ───────────────────────────────────────────────────────
+  const mapState = {
+    map: null,
+    openOrders: new Set(),     // tables with pending/cooking orders (red)
+    readyTables: new Set(),    // tables with ready-to-serve orders (red + green outline)
+    deliveredTables: new Set(), // tables with delivered orders (green)
+    selectedId: null,
+    liveMode: false,
+  };
+
+  async function loadMap() {
+    await fetchMapData();
+    fetchMapStatus();
+  }
+
+  async function fetchMapData() {
+    try {
+      const res = await fetch('/api/map');
+      const data = await res.json();
+      mapState.map = data.map;
+      renderMap();
+    } catch (err) {
+      dom.mapCanvas.innerHTML = '<div class="table-map-empty">Could not load the floor map.</div>';
+    }
+  }
+
+  async function fetchMapStatus() {
+    try {
+      const [tablesRes, ordersRes] = await Promise.all([fetch('/api/tables'), fetch('/api/orders')]);
+      mapState.sessions = [];
+      const orders = await ordersRes.json();
+      // Compute per-table status: pending (red) = has open orders,
+      // delivered (green) = all items delivered, default (yellow) = no orders.
+      mapState.openOrders = new Set();
+      mapState.readyTables = new Set();
+      mapState.deliveredTables = new Set();
+      for (const o of orders) {
+        if (o.status === 'delivered') mapState.deliveredTables.add(o.tableNumber);
+        else if (o.status === 'ready') mapState.readyTables.add(o.tableNumber);
+        else mapState.openOrders.add(o.tableNumber);
+      }
+      if (dom.mapView.style.display !== 'none') renderMap();
+    } catch (err) {
+      /* ignore — status is decorative */
+    }
+  }
+
+  function renderMap() {
+    if (!mapState.map) return;
+    dom.mapCanvas.classList.toggle('draggable', !mapState.liveMode);
+    dom.mapHint.style.display = mapState.liveMode ? 'none' : '';
+    TableMap.render(dom.mapCanvas, mapState.map, {
+      draggable: !mapState.liveMode,
+      selectedId: mapState.selectedId,
+      openOrders: Array.from(mapState.openOrders),
+      readyTables: Array.from(mapState.readyTables),
+      deliveredTables: Array.from(mapState.deliveredTables || []),
+      onClick: (t) => {
+        if (mapState.liveMode) {
+          window.open(`/app/waiter/?table=${encodeURIComponent(t.label)}`, '_blank');
+          return;
+        }
+        mapState.selectedId = t.id;
+        renderMap();
+        showMapProps(t);
+      },
+      onChange: (t) => {
+        if (mapState.selectedId === t.id) showMapProps(t);
+      },
+    });
+  }
+
+  function showMapProps(t) {
+    dom.mapProps.style.display = 'flex';
+    dom.mapLabelInput.value = t.label;
+    dom.mapLabelInput.dataset.tableId = t.id;
+    dom.mapShapeSelect.value = t.shape === 'square' || t.shape === 'rectangle' ? t.shape : 'circle';
+  }
+
+  function setupMapListeners() {
+    dom.mapUploadBtn.addEventListener('click', () => dom.mapImageInput.click());
+    dom.mapImageInput.addEventListener('change', () => {
+      const file = dom.mapImageInput.files[0];
+      dom.mapImageInput.value = '';
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          if (!mapState.map) mapState.map = { width: 800, height: 500, image: null, tables: [] };
+          mapState.map.width = Math.min(2400, Math.max(200, img.naturalWidth));
+          mapState.map.height = Math.min(1600, Math.max(150, img.naturalHeight));
+          mapState.map.image = reader.result; // saved as a file on Save map
+          renderMap();
+          showToast('Floor plan added — press 💾 Save map to keep it', 'info');
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    dom.mapRemoveImageBtn.addEventListener('click', () => {
+      if (!mapState.map) return;
+      mapState.map.image = null;
+      renderMap();
+    });
+
+    dom.mapAddTableBtn.addEventListener('click', () => {
+      if (!mapState.map) return;
+      const t = {
+        id: 't' + Date.now(),
+        label: String(mapState.map.tables.length + 1),
+        x: 50,
+        y: 50,
+        w: 8,
+        h: 8,
+        shape: 'circle',
+      };
+      mapState.map.tables.push(t);
+      mapState.selectedId = t.id;
+      renderMap();
+      showMapProps(t);
+      dom.mapLabelInput.focus();
+      dom.mapLabelInput.select();
+    });
+
+    dom.mapLabelInput.addEventListener('input', () => {
+      const t = mapState.map && mapState.map.tables.find((x) => x.id === dom.mapLabelInput.dataset.tableId);
+      if (t) {
+        t.label = dom.mapLabelInput.value.trim() || t.label;
+        renderMap();
+      }
+    });
+
+    dom.mapShapeSelect.addEventListener('change', () => {
+      const t = mapState.map && mapState.map.tables.find((x) => x.id === dom.mapLabelInput.dataset.tableId);
+      if (t) {
+        t.shape = dom.mapShapeSelect.value;
+        renderMap();
+      }
+    });
+
+    dom.mapDeleteBtn.addEventListener('click', () => {
+      const id = dom.mapLabelInput.dataset.tableId;
+      if (!mapState.map) return;
+      mapState.map.tables = mapState.map.tables.filter((x) => x.id !== id);
+      mapState.selectedId = null;
+      dom.mapProps.style.display = 'none';
+      renderMap();
+    });
+
+    dom.mapLiveToggle.addEventListener('change', () => {
+      mapState.liveMode = dom.mapLiveToggle.checked;
+      mapState.selectedId = null;
+      dom.mapProps.style.display = 'none';
+      renderMap();
+    });
+
+    dom.mapSaveBtn.addEventListener('click', saveMap);
+  }
+
+  async function saveMap() {
+    if (!mapState.map) return;
+    dom.mapSaveBtn.disabled = true;
+    dom.mapSaveBtn.textContent = 'Saving...';
+    try {
+      const res = await fetch('/api/map', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          width: mapState.map.width,
+          height: mapState.map.height,
+          image: mapState.map.image || null,
+          tables: mapState.map.tables,
+        }),
+      });
+      if (handleAuthError(res)) return;
+      if (!res.ok) throw new Error('Failed to save map');
+      const data = await res.json();
+      mapState.map = data.map;
+      renderMap();
+      showToast('Floor map saved ✅', 'success');
+    } catch (err) {
+      console.error('Save map error:', err);
+      showToast('Could not save map', 'error');
+    } finally {
+      dom.mapSaveBtn.disabled = false;
+      dom.mapSaveBtn.textContent = '💾 Save map';
+    }
   }
 
   // ─── Fetch Menu ──────────────────────────────────────────────────────
@@ -175,9 +473,10 @@
     try {
       const res = await fetch('/api/menu', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ category, name, price }),
       });
+      if (handleAuthError(res)) return;
 
       if (!res.ok) {
         const err = await res.json();
@@ -206,9 +505,10 @@
     try {
       const res = await fetch(`/api/menu/${itemId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(data),
       });
+      if (handleAuthError(res)) return;
 
       if (!res.ok) throw new Error('Failed to update item');
 
@@ -241,9 +541,10 @@
     try {
       const res = await fetch('/api/menu/category', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ key, name }),
       });
+      if (handleAuthError(res)) return;
 
       if (!res.ok) {
         const err = await res.json();
@@ -268,7 +569,8 @@
     if (!confirm('Delete this item? This cannot be undone.')) return;
 
     try {
-      const res = await fetch(`/api/menu/${itemId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/menu/${itemId}`, { method: 'DELETE', headers: authHeaders() });
+      if (handleAuthError(res)) return;
       if (!res.ok) throw new Error('Failed to delete item');
       showToast('Item deleted', 'info');
     } catch (err) {
@@ -410,14 +712,32 @@
       dom.loyaltyView.style.display = '';
       dom.mgrSubtitle.textContent = 'Loyalty & Rewards';
       loadLoyalty();
+    } else if (tab === 'map') {
+      dom.menuView.style.display = 'none';
+      dom.analyticsView.style.display = 'none';
+      dom.loyaltyView.style.display = 'none';
+      dom.mapView.style.display = '';
+      dom.mgrSubtitle.textContent = 'Floor Map';
+      loadMap();
     } else {
       dom.menuView.style.display = 'none';
       dom.analyticsView.style.display = '';
       dom.loyaltyView.style.display = 'none';
+      dom.mapView.style.display = 'none';
       dom.mgrSubtitle.textContent = 'Sales Analytics';
       // Refresh analytics
       fetchAnalytics();
     }
+
+    // Cards in the newly shown view may have been inside a display:none
+    // container when the reveal observer was set up, so the IntersectionObserver
+    // never fires for them and they would stay invisible (opacity 0). Reveal
+    // them explicitly now so tab content always appears.
+    const view =
+      tab === 'menu' ? dom.menuView : tab === 'loyalty' ? dom.loyaltyView : tab === 'map' ? dom.mapView : dom.analyticsView;
+    requestAnimationFrame(() => {
+      view.querySelectorAll('.reveal-spring').forEach((el) => el.classList.add('visible'));
+    });
   }
 
   // ─── Loyalty Admin ───────────────────────────────────────────────────
@@ -449,7 +769,7 @@
   }
 
   function fillLoyaltyRules(s) {
-    dom.loyaltyRulePerRupee.value = s.pointsPerRupee;
+    dom.loyaltyRulePerHundred.value = s.pointsPerHundred;
     dom.loyaltyRuleSpendPct.value = Math.round((s.discountSpendPct || 0) * 100);
     dom.loyaltyRuleValuePct.value = Math.round((s.discountValuePct || 0) * 100);
     dom.loyaltyRuleBirthday.value = s.birthdayBonus;
@@ -573,7 +893,7 @@
     }));
 
     const body = {
-      pointsPerRupee: parseFloat(dom.loyaltyRulePerRupee.value) || 1,
+      pointsPerHundred: parseFloat(dom.loyaltyRulePerHundred.value) || 1,
       discountSpendPct: (parseFloat(dom.loyaltyRuleSpendPct.value) || 0) / 100,
       discountValuePct: (parseFloat(dom.loyaltyRuleValuePct.value) || 0) / 100,
       birthdayBonus: parseInt(dom.loyaltyRuleBirthday.value, 10) || 0,
@@ -585,9 +905,10 @@
     try {
       const res = await fetch('/api/loyalty/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
       });
+      if (handleAuthError(res)) return;
       if (!res.ok) throw new Error('Failed to save');
       showToast('Loyalty rules saved ✅', 'success');
     } catch (err) {
@@ -722,12 +1043,6 @@
       console.error('Resolve report error:', err);
       showToast('Failed to resolve report', 'error');
     }
-  }
-
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   async function resolveRequest(id) {

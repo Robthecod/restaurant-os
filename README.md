@@ -91,9 +91,10 @@ Open `http://localhost:3100/` and create a key for the restaurant there (you'll 
 | `LICENSE_KEY` | The restaurant's key. **Empty = licensing disabled** (dev / your own cloud deploy). | `CHK-XXXX-XXXX-XXXX-XXXX` |
 | `LICENSE_SERVER_URL` | Your licensing server base URL. | `https://licenses.yourdomain.com` |
 | `LICENSE_GRACE_DAYS` | Offline grace period (default `3`). | `3` |
-| `LICENSE_CHECK_HOUR` | Daily verification hour, 0-23 (default `6`). | `6` |
+| `LICENSE_CHECK_HOUR` | Ignored (kept for compat). Checks are now 3× daily: 10 AM, 6 PM, 9 PM. | — |
 | `LICENSE_CHECK_INTERVAL_HOURS` | Optional: verify every N hours instead of once daily — for snappier lockdown enforcement (e.g. `1` = checks hourly). | `1` |
 | `WHATSAPP_NUMBER` | Restaurant's WhatsApp number (digits + country code) — enables free `wa.me` links, opt-in collection, and the manager's broadcast helper. **Unset = WhatsApp features hidden.** | `919876543210` |
+| `MANAGER_PIN` | Optional PIN protecting manager-only changes (menu CRUD + loyalty rules). When set, the manager panel asks for it before allowing edits. **Unset = open access.** | `2468` |
 
 ```bash
 # From restaurant-local/

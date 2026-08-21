@@ -41,10 +41,75 @@
     kdsHelpClose: $('#kdsHelpClose'),
     kdsHelpCancel: $('#kdsHelpCancel'),
     kdsHelpSubmit: $('#kdsHelpSubmit'),
+    // Voice
+    kdsVoiceBtn: $('#kdsVoiceBtn'),
+    kdsVoiceToggle: $('#kdsVoiceToggle'),
   };
+
+  // ─── Voice Announcements ──────────────────────────────────────────────
+  // Uses the browser's built-in speech synthesis (no dependencies). On by
+  // default; the 🔊 button in the header toggles it and the preference is
+  // remembered per device. New orders and ready items are announced aloud
+  // so the kitchen doesn't have to watch the screen.
+  const voice = {
+    enabled: localStorage.getItem('chauka_kds_voice') !== 'off',
+    supported: 'speechSynthesis' in window,
+    speak(text) {
+      if (!this.enabled || !this.supported || !text) return;
+      try {
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.rate = 1.05;
+        window.speechSynthesis.speak(utter);
+      } catch (e) { /* ignore */ }
+    },
+    toggle() {
+      this.enabled = !this.enabled;
+      localStorage.setItem('chauka_kds_voice', this.enabled ? 'on' : 'off');
+      updateVoiceBtn();
+      if (this.enabled) this.speak('Voice announcements on');
+      return this.enabled;
+    },
+  };
+
+  function updateVoiceBtn() {
+    if (dom.kdsVoiceBtn) {
+      dom.kdsVoiceBtn.textContent = voice.enabled ? '🔊' : '🔇';
+      dom.kdsVoiceBtn.title = voice.enabled
+        ? 'Voice announcements on — tap to mute'
+        : 'Voice announcements muted — tap to enable';
+      dom.kdsVoiceBtn.style.opacity = voice.enabled ? '1' : '0.45';
+    }
+    // Keep the 3-dot menu item in sync
+    if (dom.kdsVoiceToggle) {
+      const icon = dom.kdsVoiceToggle.querySelector('span');
+      const label = dom.kdsVoiceToggle.querySelector('b');
+      if (icon) icon.textContent = voice.enabled ? '🔊' : '🔇';
+      if (label) label.textContent = voice.enabled ? 'On' : 'Off';
+    }
+  }
+
+  function describeItems(items) {
+    const parts = (items || []).slice(0, 4).map((i) => {
+      const qty = i.quantity || 1;
+      return (qty > 1 ? qty + ' ' : '') + (i.name || 'item');
+    });
+    const extra = (items || []).length - 4;
+    if (extra > 0) parts.push(extra + ' more');
+    return parts.join(', ');
+  }
+
+  function announceNewOrder(order) {
+    voice.speak(`New order, table ${order.tableNumber}: ${describeItems(order.items)}`);
+  }
+
+  function announceReadyItem(tableNumber, itemName) {
+    voice.speak(`Table ${tableNumber}: ${itemName} ready`);
+  }
 
   // ─── Init ────────────────────────────────────────────────────────────
   function init() {
+    updateVoiceBtn();
+
     // Clock
     updateClock();
     setInterval(updateClock, 1000);
@@ -96,6 +161,7 @@
         renderOrders();
         showNewOrderFlash(order);
         playNewOrderSound();
+        announceNewOrder(order);
         updateStats();
       }
     });
@@ -117,6 +183,7 @@
         const item = order.items[data.itemIndex];
         if (item) {
           item.status = data.item.status;
+          if (data.item.status === 'ready') announceReadyItem(data.tableNumber, item.name);
         }
         if (data.orderStatus === 'ready') {
           // All items ready — remove from kitchen
@@ -230,11 +297,11 @@
             <div class="order-item item-status-${itemStatus}" data-index="${idx}">
               <div class="order-item-main">
                 <div class="order-item-top">
-                  <span class="order-item-name">${item.name}</span>
+                  <span class="order-item-name">${escapeHtml(item.name)}</span>
                   <span class="order-item-qty">x${item.quantity}</span>
                   <span class="item-status-dot status-${itemStatus}" title="${itemStatus}"></span>
                 </div>
-                ${item.modifiers ? `<span class="order-item-mod">${item.modifiers}</span>` : ''}
+                ${item.modifiers ? `<span class="order-item-mod">${escapeHtml(item.modifiers)}</span>` : ''}
                 <span class="item-status-label">${getStatusLabel(itemStatus)}</span>
               </div>
               <div class="order-item-actions">
@@ -353,6 +420,13 @@
     dom.statCooking.textContent = `${cookingCount} cooking`;
   }
 
+  // ─── HTML Escape (prevents XSS from menu item names/modifiers) ────
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (ch) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])
+    );
+  }
+
   // ─── Time Ago Helper ─────────────────────────────────────────────────
   function getTimeAgo(dateStr) {
     const now = new Date();
@@ -418,6 +492,18 @@
 
   // ─── 3-Dot Menu ─────────────────────────────────────────────────────
   function setupMenuListeners() {
+    // Voice announcements toggle (header button + 3-dot menu item)
+    if (dom.kdsVoiceBtn) {
+      dom.kdsVoiceBtn.addEventListener('click', () => voice.toggle());
+    }
+    if (dom.kdsVoiceToggle) {
+      dom.kdsVoiceToggle.addEventListener('click', () => {
+        dom.kdsDropdown.style.display = 'none';
+        voice.toggle();
+        showToast(voice.enabled ? '🔊 Voice announcements on' : '🔇 Voice announcements off', 'info');
+      });
+    }
+
     // Toggle dropdown
     dom.kdsMenuBtn.addEventListener('click', (e) => {
       e.stopPropagation();

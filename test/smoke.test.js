@@ -115,7 +115,7 @@ test('loyalty APIs respond and validate input', async () => {
   const settings = await fetch(`${BASE}/api/loyalty/settings`);
   assert.strictEqual(settings.status, 200);
   const body = await settings.json();
-  assert.ok(body.pointsPerRupee > 0, 'loyalty settings expose earning rules');
+  assert.ok(body.pointsPerHundred > 0, 'loyalty settings expose earning rules');
   assert.ok(Array.isArray(body.tiers) && body.tiers.length >= 2, 'settings define tiers');
 
   const noPhone = await fetch(`${BASE}/api/loyalty/status`);
@@ -127,6 +127,76 @@ test('loyalty APIs respond and validate input', async () => {
     body: JSON.stringify({ name: 'No Phone' }),
   });
   assert.strictEqual(badRegister.status, 400);
+});
+
+test('floor map API saves and serves a map', async () => {
+  const save = await fetch(`${BASE}/api/map`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      width: 800,
+      height: 500,
+      image: null,
+      tables: [{ id: 't1', label: '12', x: 50, y: 50, w: 8, h: 8, shape: 'circle' }],
+    }),
+  });
+  assert.strictEqual(save.status, 200);
+  const saved = await save.json();
+  assert.ok(saved.map.tables.length === 1, 'map should save tables');
+  assert.strictEqual(saved.map.tables[0].label, '12');
+
+  const get = await fetch(`${BASE}/api/map`);
+  assert.strictEqual(get.status, 200);
+  const body = await get.json();
+  assert.strictEqual(body.map.tables[0].label, '12');
+
+  // Reset the map so test runs leave the data file clean
+  await fetch(`${BASE}/api/map`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ width: 800, height: 500, image: null, tables: [] }),
+  });
+});
+
+test('table session APIs work (assign → close)', async () => {
+  const assign = await fetch(`${BASE}/api/tables/99/assign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: '9999900000', name: 'Smoke Test' }),
+  });
+  assert.strictEqual(assign.status, 201);
+
+  const badAssign = await fetch(`${BASE}/api/tables/99/assign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: '' }),
+  });
+  assert.strictEqual(badAssign.status, 400);
+
+  const list = await fetch(`${BASE}/api/tables`);
+  assert.strictEqual(list.status, 200);
+  const body = await list.json();
+  assert.ok(body.sessions.some((s) => s.tableNumber === '99'), 'session should be listed');
+
+  const close = await fetch(`${BASE}/api/tables/99/close`, { method: 'POST' });
+  assert.strictEqual(close.status, 200);
+  const closed = await close.json();
+  assert.strictEqual(closed.closed, true);
+
+  // /clear removes a session without counting a visit
+  await fetch(`${BASE}/api/tables/99/assign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: '9999900000' }),
+  });
+  const clear = await fetch(`${BASE}/api/tables/99/clear`, { method: 'POST' });
+  assert.strictEqual(clear.status, 200);
+  const cleared = await clear.json();
+  assert.strictEqual(cleared.cleared, true);
+
+  const afterClear = await fetch(`${BASE}/api/tables`);
+  const afterBody = await afterClear.json();
+  assert.ok(!afterBody.sessions.some((s) => s.tableNumber === '99'), 'session should be gone after clear');
 });
 
 test('returns 404 for unknown API routes', async () => {

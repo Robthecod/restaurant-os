@@ -62,10 +62,17 @@ MANAGER (manager panel, /app/manager/ -> Loyalty tab)
 3. POINTS & MONEY MATH (exact formulas)
 -------------------------------------------------------------------------
 EARNING (on delivery):
-    base  = floor( orderTotal / pointsPerRupee )          [1 pt per rupee]
+    base  = floor( orderTotal / 100 x pointsPerHundred )  [e.g. 100 pts per Rs.100]
     earn  = floor( base x tierMultiplier )
-    +200 pts birthday bonus (if their MM-DD birthday is today)
-    +50  pts visit-streak bonus (every 5th completed visit)
+    +birthday bonus (if their MM-DD birthday is today)
+
+VISITS = TABLE SESSIONS (not orders):
+    The waiter assigns a phone to a table ONCE (header chip / 3-dot menu).
+    Every order from that table automatically earns points for that
+    customer — no per-order phone entry. When the table is closed (bill
+    paid), the customer's visit count increases by exactly 1 and the
+    visit-streak bonus (+50 pts) is awarded on every Nth visit. Closing a
+    table with a wrong phone or no orders does not count a visit.
 
     orderTotal = sum of item prices, EXCLUDING redeemed free items and
     their modifiers. Discounts on the bill do not reduce earning.
@@ -103,8 +110,17 @@ MANAGER:
   GET  /api/loyalty/customers   -> all profiles (public shape)
   GET  /api/loyalty/ledger?limit=50  -> activity feed (max 200)
   POST /api/loyalty/settings    -> update rules
-       body: { pointsPerRupee, discountSpendPct, discountValuePct,
+       body: { pointsPerHundred, discountSpendPct, discountValuePct,
                birthdayBonus, streakEvery, streakBonus, tiers:[...] }
+
+TABLE SESSIONS (loyalty phone per table):
+  GET  /api/tables               -> open sessions
+  GET  /api/tables/:table        -> one session (customer screen prefill)
+  POST /api/tables/:table/assign   { phone, name? } -> attach phone to table
+  POST /api/tables/:table/close    -> bill paid: clear phone, count the visit
+  POST /api/tables/:table/clear    -> remove phone WITHOUT counting a visit
+       (use when the wrong number was entered — /close would award a visit)
+  Orders automatically pick up the table's phone — no per-order entry.
 
 ORDER INTEGRATION (server handles this automatically):
   POST /api/orders/customer   (customer screen)
@@ -159,7 +175,7 @@ Ledger types: earn | birthday | streak | redeem_item | redeem_discount
 Ledger is capped at the 500 most recent entries.
 
 DEFAULT SETTINGS (manager can change all of these):
-  pointsPerRupee: 1          (1 pt per Rs.1)
+  pointsPerHundred: 100      (100 pts per Rs.100)
   discountSpendPct: 0.1      (discount spends 10% of bill in points)
   discountValuePct: 0.5      (each point = Rs.0.50 off -> 5% total)
   birthdayBonus: 200

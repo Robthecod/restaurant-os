@@ -23,6 +23,7 @@ const PRECACHE = [
   '/app/customer/customer.js',
   '/app/js/socket-client.js',
   '/app/js/license-client.js',
+  '/app/js/table-map.js',
 ];
 
 // Install event — cache core assets

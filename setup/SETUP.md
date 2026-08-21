@@ -57,9 +57,10 @@ LICENSE_SERVER_URL=https://licenses.yourdomain.com
 | `LICENSE_KEY` | The restaurant's license key | `CHK-XXXX-XXXX-XXXX-XXXX` |
 | `LICENSE_SERVER_URL` | Your licensing server URL | `https://licenses.yourdomain.com` |
 | `LICENSE_GRACE_DAYS` | Offline grace period (default `3`) | `3` |
-| `LICENSE_CHECK_HOUR` | Daily check time, 0–23 (default `6`) | `6` |
+| `LICENSE_CHECK_HOUR` | Ignored (kept for compat). Checks are now 3× daily: 10 AM, 6 PM, 9 PM. | — |
 | `LICENSE_CHECK_INTERVAL_HOURS` | Check every N hours instead of daily (snappier lockdown) | `1` |
 | `WHATSAPP_NUMBER` | Restaurant's WhatsApp number (digits only, with country code) — enables WhatsApp links | `919876543210` |
+| `MANAGER_PIN` | Optional PIN protecting manager-only changes (menu + loyalty rules). Unset = open access | `2468` |
 
 The client does **not** need the admin token — that only lives on your licensing server.
 
@@ -120,7 +121,7 @@ For a permanent setup, run the server as a background service:
 ## 🔒 If the license is not paid or expires
 
 - The system **locks to read-only**: new orders, status changes, and menu edits are rejected (HTTP 402), and every screen shows a lock screen with the reason.
-- The lock applies at the restaurant's **next check** — at startup, then daily at 6 AM (or hourly if `LICENSE_CHECK_INTERVAL_HOURS=1`).
+- The lock applies at the restaurant's **next check** — at startup, then 3× daily at 10 AM, 6 PM, 9 PM (or hourly if `LICENSE_CHECK_INTERVAL_HOURS=1`).
 - If your licensing server is **unreachable**, the restaurant keeps running for a **3-day grace period** (since the last successful check), then locks. This protects against vendor-side outages, not unpaid keys.
 - To unlock: mark the key as **paid** in the license manager. The restaurant unlocks at its next check, or instantly via the "Check again" button on the lock screen.
 

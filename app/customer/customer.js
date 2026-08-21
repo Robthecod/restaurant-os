@@ -111,6 +111,24 @@
 
     // Loyalty: load rules + restore the guest's account
     initLoyalty();
+
+    // If this table already has a phone assigned (waiter entered it, or a
+    // previous order by the same party), prefill it so they don't re-enter.
+    fetchTableSession();
+  }
+
+  // ─── Table Session (loyalty phone, entered once per table) ───────────
+  async function fetchTableSession() {
+    try {
+      const res = await fetch(`/api/tables/${state.tableNumber}`);
+      const data = await res.json();
+      if (data.session && data.session.phone) {
+        dom.loyaltyPhone.value = data.session.phone;
+        checkLoyalty(data.session.phone);
+      }
+    } catch (err) {
+      /* offline — leave empty */
+    }
   }
 
   // ─── Socket ──────────────────────────────────────────────────────────
@@ -397,7 +415,7 @@
   function estimateEarn(total) {
     const s = state.loyaltySettings;
     if (!s || !total) return 0;
-    let pts = Math.floor(total / s.pointsPerRupee);
+    let pts = Math.floor((total / 100) * (s.pointsPerHundred || 100));
     const tier =
       (s.tiers || []).find((t) => t.key === (state.loyalty && state.loyalty.tier)) || (s.tiers || [])[0];
     return Math.floor(pts * (tier ? tier.multiplier : 1));

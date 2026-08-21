@@ -323,3 +323,129 @@ label {
 .justify-center { justify-content: center; }
 .flex-wrap { flex-wrap: wrap; }
 .w-full { width: 100%; }
+
+/* ─── Floor Map (shared: manager editor + waiter picker) ─────────────── */
+.table-map-box {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  background-color: #e9ecef;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.table-map-box.draggable { touch-action: none; }
+
+.tm-table {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #facc15, #eab308);
+  color: #1a1a2e;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  user-select: none;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  min-width: 26px;
+  min-height: 26px;
+}
+.tm-table.square { border-radius: 18%; }
+.tm-table.rectangle { border-radius: 10%; }
+.tm-table .tm-label {
+  font-size: clamp(0.55rem, 1.6vw, 0.9rem);
+  pointer-events: none;
+  white-space: nowrap;
+  padding: 0 2px;
+}
+.tm-table.selected {
+  outline: 3px solid var(--accent-blue, #3b82f6);
+  outline-offset: 2px;
+}
+/* Default (yellow): no orders / yet to order */
+/* Pending (red): order placed but not ready yet */
+.tm-table.pending,
+.tm-table.busy {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+}
+/* Ready-to-serve (red + green outline): kitchen done, needs delivery */
+.tm-table.ready-to-serve,
+.tm-table.ready {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  border: 3px solid #22c55e;
+  box-shadow: 0 0 0 2px #22c55e, 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+/* Delivered (green): food received */
+.tm-table.delivered {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+}
+.tm-resize {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border: 2px solid var(--accent-blue, #3b82f6);
+  border-radius: 4px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+.table-map-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Map toolbar (manager) */
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.map-live-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-left: auto;
+}
+.map-editor-props {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.map-editor-props input {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  font-family: var(--font);
+  outline: none;
+  max-width: 120px;
+}
